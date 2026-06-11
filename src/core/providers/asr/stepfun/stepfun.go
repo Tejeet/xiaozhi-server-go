@@ -12,6 +12,7 @@ import (
 	"xiaozhi-server-go/src/core/providers/asr"
 	"xiaozhi-server-go/src/core/utils"
 
+	"github.com/bytedance/sonic"
 	"github.com/gorilla/websocket"
 )
 
@@ -209,7 +210,7 @@ func (p *Provider) sendJSON(v interface{}) error {
 	if p.conn == nil {
 		return fmt.Errorf("WebSocket连接不存在")
 	}
-	bytes, err := utils.Marshal(v)
+	bytes, err := sonic.Marshal(v)
 	if err != nil {
 		return err
 	}
@@ -249,7 +250,7 @@ func (p *Provider) readLoop() {
 			continue
 		}
 
-		if err := utils.Unmarshal(data, &baseEvent); err != nil {
+		if err := sonic.Unmarshal(data, &baseEvent); err != nil {
 			p.setErrorAndStop(fmt.Errorf("解析服务端事件失败: %v", err))
 			return
 		}
@@ -258,7 +259,7 @@ func (p *Provider) readLoop() {
 		switch baseEvent.Type {
 		case "error":
 			e := ErrorEvent{}
-			if err := utils.Unmarshal(data, &e); err != nil {
+			if err := sonic.Unmarshal(data, &e); err != nil {
 				p.logger.Error("解析服务端事件失败: %v", err)
 				return
 			}
@@ -266,7 +267,7 @@ func (p *Provider) readLoop() {
 			return
 		case "session.created":
 			e := SessionCreatedEvent{}
-			if err := utils.Unmarshal(data, &e); err != nil {
+			if err := sonic.Unmarshal(data, &e); err != nil {
 				p.logger.Error("解析服务端事件失败: %v", err)
 				return
 			}
@@ -276,7 +277,7 @@ func (p *Provider) readLoop() {
 			continue
 		case "conversation.item.input_audio_transcription.completed":
 			e := ConversationItemInputAudioTranscriptionCompletedEvent{}
-			if err := utils.Unmarshal(data, &e); err != nil {
+			if err := sonic.Unmarshal(data, &e); err != nil {
 				p.logger.Error("解析服务端事件失败: %v", err)
 				return
 			}
