@@ -210,7 +210,9 @@ jobs:
 
       - name: Build Go binary for Android
         run: |
-          cd src && go build -v -ldflags="-s -w" -o ../android-${{ matrix.arch }}-server
+          # Use -tags=go_json to force gin to use encoding/json instead of sonic
+          # sonic does not support 32-bit ARM architectures
+          cd src && go build -v -tags=go_json -ldflags="-s -w" -o ../android-${{ matrix.arch }}-server
 
       - name: Upload Android binary
         uses: actions/upload-artifact@v4
