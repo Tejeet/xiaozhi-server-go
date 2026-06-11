@@ -30,9 +30,10 @@ const (
 var DefaultLogger *Logger
 
 type LogCfg struct {
-	LogLevel string `yaml:"log_level" json:"log_level"`
-	LogDir   string `yaml:"log_dir" json:"log_dir"`
-	LogFile  string `yaml:"log_file" json:"log_file"`
+	LogFormat string `yaml:"log_format" json:"log_format"`
+	LogLevel  string `yaml:"log_level" json:"log_level"`
+	LogDir    string `yaml:"log_dir" json:"log_dir"`
+	LogFile   string `yaml:"log_file" json:"log_file"`
 }
 
 // CustomTextHandler 自定义文本处理器，支持彩色输出和格式化

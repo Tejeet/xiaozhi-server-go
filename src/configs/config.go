@@ -15,10 +15,13 @@ type Config struct {
 		Port  int    `yaml:"port" json:"port"`
 		Token string `json:"token"`
 		Auth  struct {
-			Store struct {
+			Enabled       bool     `yaml:"enabled" json:"enabled"`
+			Store         struct {
 				Type   string `yaml:"type" json:"type"`     // memory/file/redis
 				Expiry int    `yaml:"expiry" json:"expiry"` // 过期时间(小时)
 			} `yaml:"store" json:"store"`
+			AllowedDevices []string `yaml:"allowed_devices" json:"allowed_devices"`
+			Tokens         []string `yaml:"tokens" json:"tokens"`
 		} `yaml:"auth" json:"auth"`
 		ServerVersion string `yaml:"server_version" json:"server_version"`
 	} `yaml:"server" json:"server"`
@@ -50,12 +53,14 @@ type Config struct {
 	} `yaml:"transport" json:"transport"`
 
 	Log struct {
-		LogLevel string `yaml:"log_level" json:"log_level"`
-		LogDir   string `yaml:"log_dir" json:"log_dir"`
-		LogFile  string `yaml:"log_file" json:"log_file"`
+		LogFormat string `yaml:"log_format" json:"log_format"`
+		LogLevel  string `yaml:"log_level" json:"log_level"`
+		LogDir    string `yaml:"log_dir" json:"log_dir"`
+		LogFile   string `yaml:"log_file" json:"log_file"`
 	} `yaml:"log" json:"log"`
 
 	Web struct {
+		Enabled      bool   `yaml:"enabled" json:"enabled"`
 		Port         int    `yaml:"port" json:"port"`
 		StaticDir    string `yaml:"static_dir" json:"static_dir"`
 		Websocket    string `yaml:"websocket" json:"websocket"`
