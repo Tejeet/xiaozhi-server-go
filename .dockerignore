@@ -1,0 +1,22 @@
+# 只把镜像需要的东西送进构建上下文
+.git
+.github
+docs
+src
+go.mod
+go.sum
+Makefile
+README.md
+LICENSE
+*.exe
+windows-*-server*
+android-*-server*
+linux-arm64-server*
+linux-amd64-server
+.config.yaml
+config.db
+logs
+tmp
+uploads
+ota_bin
+.DS_Store

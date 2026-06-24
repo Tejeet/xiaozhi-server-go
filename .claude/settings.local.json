@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(chmod +x linux-amd64-server-upx)",
+      "Bash(git update-index *)",
+      "Bash(docker version *)"
+    ]
+  }
+}

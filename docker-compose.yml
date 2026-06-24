@@ -1,16 +1,15 @@
 services:
   app:
-    image: ghcr.io/animeaichat/xiaozhi-server-go:server
+    build: .
     container_name: xiaozhi-server
     restart: unless-stopped
-    volumes:
-      - .:/app
-    working_dir: /app
-    command: ["./linux-amd64-server-upx"] #修改成程序文件名
     ports:
       - "8080:8080"
       - "8000:8000"
     environment:
-      - DATABASE_URL=sqlite://./config.db
       - ENV=production
       - PORT=8080
+    # 注意：不要再用 `- .:/app` 绑定挂载。
+    # Coolify 会把它转成一个空的命名卷，覆盖掉镜像里的二进制，
+    # 导致 "./linux-amd64-server-upx: no such file or directory"。
+    # 所需文件已经在 Dockerfile 里 COPY 进镜像。
