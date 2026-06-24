@@ -2,16 +2,20 @@ services:
   app:
     build: .
     restart: unless-stopped
-    # 用 expose（仅容器内端口），不要用 ports 直接绑定宿主机端口。
-    # Coolify 自带反向代理，会按你在面板里配置的域名把流量转发到这些端口。
-    # 直接 `ports: 8000:8000` 会和宿主机上已占用的端口冲突：
-    #   "Bind for 0.0.0.0:8000 failed: port is already allocated"
-    expose:
-      - "8080"  # HTTP / Web 管理界面 —— 在 Coolify 里把域名指向这个端口
-      - "8000"  # 设备 WebSocket
+    # 用 9000 段宿主机端口，避开宿主机上已被占用的 8000/8080。
+    # 左边是宿主机端口，右边是容器内端口（容器内固定 8080 / 8000，别改）。
+    ports:
+      - "9080:8080"  # Web 管理界面 → http://<服务器IP>:9080
+      - "9000:8000"  # 设备 WebSocket  → ws://<服务器IP>:9000
     environment:
       - ENV=production
       - PORT=8080
+      # 可选：通过 Coolify 反代用域名访问 Web 界面（路由到容器 8080 端口）。
+      # 这一行能修复之前的 "Bad Request"（之前域名被错误地指到了 8000）。
+      # 如果只想用上面的 9080 端口直连，把这行删掉即可。
+      - SERVICE_FQDN_APP_8080=https://xiaozhi.tejeet.com
+      # 设备 WebSocket（8000）走域名时再开，用单独子域名：
+      # - SERVICE_FQDN_APP_8000=https://ws.xiaozhi.tejeet.com
     # 注意：不要再用 `- .:/app` 绑定挂载。
     # Coolify 会把它转成一个空的命名卷，覆盖掉镜像里的二进制，
     # 导致 "./linux-amd64-server-upx: no such file or directory"。
