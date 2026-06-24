@@ -9,7 +9,7 @@ import (
 
 var musicNames []string
 
-// MusicMatch 表示音乐文件匹配结果
+// MusicMatch represents a music-file match result
 type MusicMatch struct {
 	FilePath   string
 	FileName   string
@@ -17,14 +17,14 @@ type MusicMatch struct {
 }
 
 func checkMusicDirectory(musicDir string) bool {
-	// 检查音乐目录是否存在
+	// Check whether the music directory exists
 	if _, err := os.Stat(musicDir); os.IsNotExist(err) {
 		return false
 	}
 	return true
 }
 
-// 获取所有歌曲名字
+// GetAllMusicNames gets the names of all songs
 func GetAllMusicNames(musicDir string) ([]string, error) {
 	if len(musicNames) > 0 {
 		return musicNames, nil
@@ -67,10 +67,10 @@ func getRandomMusicFile(musicDir string) (string, string, error) {
 	if len(files) == 0 {
 		return "", "", fmt.Errorf("no music files found in directory '%s'", musicDir)
 	}
-	// 随机选择一个文件
+	// Randomly select a file
 	randomIndex := rand.Intn(len(files))
 	fileName := files[randomIndex]
-	// 去掉扩展名
+	// Strip the extension
 	if dotIndex := strings.LastIndex(fileName, "."); dotIndex != -1 {
 		fileName = fileName[:dotIndex]
 	}
@@ -81,22 +81,23 @@ func GetFileNameFromPath(filePath string) string {
 	if filePath == "" {
 		return ""
 	}
-	// 获取文件名部分
+	// Get the file-name part
 	fileName := filePath[strings.LastIndex(filePath, "/")+1:]
-	fileName = fileName[strings.LastIndex(fileName, "\\")+1:] // 处理Windows路径
-	// 去掉扩展名
+	fileName = fileName[strings.LastIndex(fileName, "\\")+1:] // Handle Windows paths
+	// Strip the extension
 	if dotIndex := strings.LastIndex(fileName, "."); dotIndex != -1 {
 		fileName = fileName[:dotIndex]
 	}
 	return fileName
 }
 
-// 根据音乐文件名获取音乐文件路径（模糊匹配）
+// GetMusicFilePathFuzzy gets a music file path by song name (fuzzy matching)
 func GetMusicFilePathFuzzy(songName string) (string, string, error) {
 	musicDir := "./music"
 
+	// "随机" is the Chinese voice command for "random"; keep it alongside "random"
 	if songName == "random" || songName == "随机" {
-		// 如果是随机请求，直接返回一个随机音乐文件
+		// For a random request, just return a random music file
 		return getRandomMusicFile(musicDir)
 	}
 
@@ -104,14 +105,14 @@ func GetMusicFilePathFuzzy(songName string) (string, string, error) {
 		return "", "", os.ErrNotExist
 	}
 
-	// 首先尝试精确匹配
+	// First try an exact match
 	filePath := fmt.Sprintf("%s/%s.mp3", musicDir, songName)
-	// 如果存在，则直接返回
+	// If it exists, return it directly
 	if _, err := os.Stat(filePath); err == nil {
 		return filePath, songName, nil
 	}
 
-	// 获取所有音乐文件
+	// Get all music files
 	files, err := GetAllMusicNames(musicDir)
 	if err != nil {
 		return "", "", err
@@ -122,7 +123,7 @@ func GetMusicFilePathFuzzy(songName string) (string, string, error) {
 
 	normalizedInput := normalizeString(songName)
 
-	// 对每个文件计算相似度
+	// Compute the similarity for each file
 	for _, file := range files {
 		fileName := file
 		fileNameWithoutExt := strings.TrimSuffix(fileName, ".mp3")
@@ -137,7 +138,7 @@ func GetMusicFilePathFuzzy(songName string) (string, string, error) {
 		}
 	}
 
-	// 如果最佳匹配的相似度大于等于0.5，返回结果
+	// If the best match's similarity is >= 0.5, return the result
 	if bestMatch.Similarity >= 0.5 {
 		fileName := GetFileNameFromPath(bestMatch.FilePath)
 		return bestMatch.FilePath, fileName, nil
@@ -150,7 +151,7 @@ func GetMusicFilePathFuzzy(songName string) (string, string, error) {
 	)
 }
 
-// normalizeString 标准化字符串，去除特殊字符和空格，转换为小写
+// normalizeString normalizes a string: removes special characters and spaces, converts to lowercase
 func normalizeString(s string) string {
 	var result strings.Builder
 	for _, r := range s {
@@ -162,7 +163,7 @@ func normalizeString(s string) string {
 	return strings.ToLower(result.String())
 }
 
-// calculateSimilarity 计算两个字符串的相似度（0-1之间）
+// calculateSimilarity computes the similarity between two strings (between 0 and 1)
 func calculateSimilarity(s1, s2 string) float64 {
 	if s1 == s2 {
 		return 1.0
@@ -172,7 +173,7 @@ func calculateSimilarity(s1, s2 string) float64 {
 		return 0.0
 	}
 
-	// 包含匹配检查
+	// Containment match check
 	containsSimilarity := 0.0
 	if strings.Contains(s1, s2) || strings.Contains(s2, s1) {
 		shorter := len(s1)
@@ -183,7 +184,7 @@ func calculateSimilarity(s1, s2 string) float64 {
 		containsSimilarity = float64(shorter) / float64(longer)
 	}
 
-	// 编辑距离相似度
+	// Edit-distance similarity
 	editDist := editDistance(s1, s2)
 	maxLen := len(s1)
 	if len(s2) > maxLen {
@@ -191,11 +192,11 @@ func calculateSimilarity(s1, s2 string) float64 {
 	}
 	editSimilarity := 1.0 - float64(editDist)/float64(maxLen)
 
-	// 最长公共子序列相似度
+	// Longest-common-subsequence similarity
 	lcsLen := longestCommonSubsequence(s1, s2)
 	lcsSimilarity := float64(lcsLen*2) / float64(len(s1)+len(s2))
 
-	// 综合相似度（权重分配）
+	// Combined similarity (weighted)
 	finalSimilarity := containsSimilarity*0.3 + editSimilarity*0.4 + lcsSimilarity*0.3
 
 	if finalSimilarity > 1.0 {
@@ -205,7 +206,7 @@ func calculateSimilarity(s1, s2 string) float64 {
 	return finalSimilarity
 }
 
-// editDistance 计算编辑距离
+// editDistance computes the edit distance
 func editDistance(s1, s2 string) int {
 	m, n := len(s1), len(s2)
 	dp := make([][]int, m+1)
@@ -233,7 +234,7 @@ func editDistance(s1, s2 string) int {
 	return dp[m][n]
 }
 
-// longestCommonSubsequence 计算最长公共子序列长度
+// longestCommonSubsequence computes the length of the longest common subsequence
 func longestCommonSubsequence(s1, s2 string) int {
 	m, n := len(s1), len(s2)
 	dp := make([][]int, m+1)
@@ -254,7 +255,7 @@ func longestCommonSubsequence(s1, s2 string) int {
 	return dp[m][n]
 }
 
-// min 返回三个整数中的最小值
+// min returns the minimum of three integers
 func min(a, b, c int) int {
 	if a <= b && a <= c {
 		return a
@@ -265,7 +266,7 @@ func min(a, b, c int) int {
 	return c
 }
 
-// max 返回两个整数中的最大值
+// max returns the maximum of two integers
 func max(a, b int) int {
 	if a > b {
 		return a

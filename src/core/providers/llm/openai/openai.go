@@ -12,19 +12,19 @@ import (
 	"github.com/sashabaranov/go-openai"
 )
 
-// Provider OpenAI LLM提供者
+// Provider is the OpenAI LLM provider
 type Provider struct {
 	*llm.BaseProvider
 	client    *openai.Client
 	maxTokens int
 }
 
-// 注册提供者
+// Register the provider
 func init() {
 	llm.Register("openai", NewProvider)
 }
 
-// NewProvider 创建OpenAI提供者
+// NewProvider creates an OpenAI provider
 func NewProvider(config *llm.Config) (llm.Provider, error) {
 	base := llm.NewBaseProvider(config)
 	provider := &Provider{
@@ -38,7 +38,7 @@ func NewProvider(config *llm.Config) (llm.Provider, error) {
 	return provider, nil
 }
 
-// Initialize 初始化提供者
+// Initialize initializes the provider
 func (p *Provider) Initialize() error {
 	config := p.Config()
 	if config.APIKey == "" {
@@ -54,19 +54,19 @@ func (p *Provider) Initialize() error {
 	return nil
 }
 
-// Cleanup 清理资源
+// Cleanup cleans up resources
 func (p *Provider) Cleanup() error {
 	return nil
 }
 
-// Response types.LLMProvider接口实现
+// Response implements the types.LLMProvider interface
 func (p *Provider) Response(ctx context.Context, sessionID string, messages []types.Message) (<-chan string, error) {
 	responseChan := make(chan string, 10)
 
 	go func() {
 		defer close(responseChan)
 
-		// 转换消息格式
+		// Convert the message format
 		chatMessages := make([]openai.ChatCompletionMessage, len(messages))
 		for i, msg := range messages {
 			chatMessages[i] = openai.ChatCompletionMessage{
@@ -118,14 +118,14 @@ func (p *Provider) Response(ctx context.Context, sessionID string, messages []ty
 	return responseChan, nil
 }
 
-// ResponseWithFunctions types.LLMProvider接口实现
+// ResponseWithFunctions implements the types.LLMProvider interface
 func (p *Provider) ResponseWithFunctions(ctx context.Context, sessionID string, messages []types.Message, tools []openai.Tool) (<-chan types.Response, error) {
 	responseChan := make(chan types.Response, 10)
 
 	go func() {
 		defer close(responseChan)
 
-		// 转换消息格式
+		// Convert the message format
 		chatMessages := make([]openai.ChatCompletionMessage, len(messages))
 		for i, msg := range messages {
 			chatMessage := openai.ChatCompletionMessage{
@@ -133,12 +133,12 @@ func (p *Provider) ResponseWithFunctions(ctx context.Context, sessionID string, 
 				Content: msg.Content,
 			}
 
-			// 处理tool_call_id字段（tool消息必需）
+			// Handle the tool_call_id field (required for tool messages)
 			if msg.ToolCallID != "" {
 				chatMessage.ToolCallID = msg.ToolCallID
 			}
 
-			// 处理tool_calls字段（assistant消息中的工具调用）
+			// Handle the tool_calls field (tool calls in assistant messages)
 			if len(msg.ToolCalls) > 0 {
 				openaiToolCalls := make([]openai.ToolCall, len(msg.ToolCalls))
 				for j, tc := range msg.ToolCalls {

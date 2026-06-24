@@ -12,7 +12,7 @@ import (
 	opus "github.com/qrtc/opus-go"
 )
 
-// OpusDecoder 封装opus解码器
+// OpusDecoder wraps the opus decoder
 type OpusDecoder struct {
 	decoder   *opus.OpusDecoder
 	mu        sync.Mutex
@@ -20,18 +20,18 @@ type OpusDecoder struct {
 	outBuffer []byte
 }
 
-// OpusDecoderConfig 解码器配置
+// OpusDecoderConfig is the decoder configuration
 type OpusDecoderConfig struct {
 	SampleRate  int
 	MaxChannels int
 }
 
-// NewOpusDecoder 创建新的opus解码器
+// NewOpusDecoder creates a new opus decoder
 func NewOpusDecoder(config *OpusDecoderConfig) (*OpusDecoder, error) {
 	if config == nil {
 		config = &OpusDecoderConfig{
-			SampleRate:  24000, // 默认使用24kHz采样率
-			MaxChannels: 1,     // 默认单通道
+			SampleRate:  24000, // Use a 24kHz sample rate by default
+			MaxChannels: 1,     // Mono by default
 		}
 	}
 
@@ -42,12 +42,12 @@ func NewOpusDecoder(config *OpusDecoderConfig) (*OpusDecoder, error) {
 
 	decoder, err := opus.CreateOpusDecoder(libConfig)
 	if err != nil {
-		return nil, fmt.Errorf("创建Opus解码器失败: %v", err)
+		return nil, fmt.Errorf("failed to create Opus decoder: %v", err)
 	}
 
 	bufSize := config.SampleRate * 2 * config.MaxChannels * 120 / 1000
 	if bufSize < 8192 {
-		bufSize = 8192 // 至少8KB的缓冲区
+		bufSize = 8192 // At least an 8KB buffer
 	}
 
 	return &OpusDecoder{
@@ -57,7 +57,7 @@ func NewOpusDecoder(config *OpusDecoderConfig) (*OpusDecoder, error) {
 	}, nil
 }
 
-// Decode 解码opus数据为PCM
+// Decode decodes opus data into PCM
 func (d *OpusDecoder) Decode(opusData []byte) ([]byte, error) {
 	if len(opusData) == 0 {
 		return nil, nil
@@ -66,26 +66,26 @@ func (d *OpusDecoder) Decode(opusData []byte) ([]byte, error) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
-	// 使用预分配的缓冲区
+	// Use the pre-allocated buffer
 	n, err := d.decoder.Decode(opusData, d.outBuffer)
 	if err != nil {
-		return nil, fmt.Errorf("Opus解码失败: %v", err)
+		return nil, fmt.Errorf("Opus decode failed: %v", err)
 	}
 
-	// 返回解码后的PCM数据的副本
+	// Return a copy of the decoded PCM data
 	result := make([]byte, n)
 	copy(result, d.outBuffer[:n])
 	return result, nil
 }
 
-// Close 关闭解码器
+// Close closes the decoder
 func (d *OpusDecoder) Close() error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
 	if d.decoder != nil {
 		if err := d.decoder.Close(); err != nil {
-			return fmt.Errorf("关闭Opus解码器失败: %v", err)
+			return fmt.Errorf("failed to close Opus decoder: %v", err)
 		}
 		d.decoder = nil
 	}
@@ -95,65 +95,65 @@ func (d *OpusDecoder) Close() error {
 func MP3ToPCMData(audioFile string) ([][]byte, error) {
 	file, err := os.Open(audioFile)
 	if err != nil {
-		return nil, fmt.Errorf("打开音频文件失败: %v", err)
+		return nil, fmt.Errorf("failed to open audio file: %v", err)
 	}
 	defer file.Close()
 
 	decoder, err := mp3.NewDecoder(file)
 	if err != nil {
-		return nil, fmt.Errorf("创建MP3解码器失败: %v", err)
+		return nil, fmt.Errorf("failed to create MP3 decoder: %v", err)
 	}
 
 	mp3SampleRate := decoder.SampleRate()
 
-	// 检查采样率是否支持
+	// Check whether the sample rate is supported
 	supportedRates := map[int]bool{8000: true, 12000: true, 16000: true, 24000: true, 48000: true}
 	if !supportedRates[mp3SampleRate] {
-		return nil, fmt.Errorf("MP3采样率 %dHz 不被Opus直接支持，需要重采样", mp3SampleRate)
+		return nil, fmt.Errorf("MP3 sample rate %dHz is not directly supported by Opus and needs resampling", mp3SampleRate)
 	}
 
-	// decoder.Length() 返回解码后的PCM数据总字节数 (16-bit little-endian stereo)
+	// decoder.Length() returns the total number of bytes of decoded PCM data (16-bit little-endian stereo)
 	pcmBytes := make([]byte, decoder.Length())
-	// ReadFull确保读取所有请求的字节，否则返回错误
+	// ReadFull ensures all requested bytes are read, otherwise it returns an error
 	if _, err := io.ReadFull(decoder, pcmBytes); err != nil {
-		// 如果 decoder.Length() 为 0, pcmBytes 为空, ReadFull 读取 0 字节, 返回 nil 错误，这是正常的。
-		// 如果 decoder.Length() > 0 且 ReadFull 返回错误, 表示未能读取完整的PCM数据。
-		return nil, fmt.Errorf("读取PCM数据失败: %v", err)
+		// If decoder.Length() is 0, pcmBytes is empty, ReadFull reads 0 bytes and returns a nil error, which is normal.
+		// If decoder.Length() > 0 and ReadFull returns an error, it means the complete PCM data could not be read.
+		return nil, fmt.Errorf("failed to read PCM data: %v", err)
 	}
 
-	// go-mp3 解码为 16-bit little-endian stereo PCM.
-	// pcmBytes 包含交错的立体声数据 (LRLRLR...).
-	// 每个立体声样本对 (左16位, 右16位) 占用4字节.
-	// numMonoSamples 是转换后得到的16位单声道样本的数量.
+	// go-mp3 decodes into 16-bit little-endian stereo PCM.
+	// pcmBytes contains interleaved stereo data (LRLRLR...).
+	// Each stereo sample pair (left 16-bit, right 16-bit) takes 4 bytes.
+	// numMonoSamples is the number of 16-bit mono samples after conversion.
 	numMonoSamples := len(pcmBytes) / 4
 
 	if numMonoSamples == 0 {
-		// 处理 pcmBytes 为空或数据不足以形成一个单声道样本的情况 (即少于4字节).
-		return [][]byte{}, nil // 返回空数据
+		// Handle the case where pcmBytes is empty or there is not enough data for a single mono sample (i.e. fewer than 4 bytes).
+		return [][]byte{}, nil // Return empty data
 	}
 
 	pcmMonoInt16 := make([]int16, numMonoSamples)
 	for i := 0; i < numMonoSamples; i++ {
-		// 从pcmBytes中提取16位小端序的左右声道样本
-		// pcmBytes[i*4+0] = 左声道低字节, pcmBytes[i*4+1] = 左声道高字节
-		// pcmBytes[i*4+2] = 右声道低字节, pcmBytes[i*4+3] = 右声道高字节
+		// Extract the 16-bit little-endian left and right channel samples from pcmBytes
+		// pcmBytes[i*4+0] = left channel low byte, pcmBytes[i*4+1] = left channel high byte
+		// pcmBytes[i*4+2] = right channel low byte, pcmBytes[i*4+3] = right channel high byte
 		leftSample := int16(uint16(pcmBytes[i*4+0]) | (uint16(pcmBytes[i*4+1]) << 8))
 		rightSample := int16(uint16(pcmBytes[i*4+2]) | (uint16(pcmBytes[i*4+3]) << 8))
 
-		// 通过平均值混合为单声道样本
-		// 使用int32进行中间求和以防止在除法前溢出
+		// Mix down to a mono sample by averaging
+		// Use int32 for the intermediate sum to prevent overflow before the division
 		pcmMonoInt16[i] = int16((int32(leftSample) + int32(rightSample)) / 2)
 	}
 
-	// 将 []int16 类型的单声道PCM数据转换为 []byte (仍然是16位小端序)
-	monoPcmDataBytes := make([]byte, numMonoSamples*2) // 每个int16样本占用2字节
+	// Convert the []int16 mono PCM data to []byte (still 16-bit little-endian)
+	monoPcmDataBytes := make([]byte, numMonoSamples*2) // Each int16 sample takes 2 bytes
 	for i, sample := range pcmMonoInt16 {
-		monoPcmDataBytes[i*2] = byte(sample)        // 低字节 (LSB)
-		monoPcmDataBytes[i*2+1] = byte(sample >> 8) // 高字节 (MSB)
+		monoPcmDataBytes[i*2] = byte(sample)        // Low byte (LSB)
+		monoPcmDataBytes[i*2+1] = byte(sample >> 8) // High byte (MSB)
 	}
 
-	// 函数签名要求返回 [][]byte.
-	// 将整个单声道PCM数据作为外部切片中的单个段/切片返回.
+	// The function signature requires returning [][]byte.
+	// Return the entire mono PCM data as a single segment/slice in the outer slice.
 	return [][]byte{monoPcmDataBytes}, nil
 }
 
@@ -163,9 +163,9 @@ func SaveAudioToWavFile(
 	sampleRate int,
 	channels int,
 	bitsPerSample int,
-	append bool, // 新增参数：是否追加写入，默认为false
+	append bool, // New parameter: whether to append, defaults to false
 ) (string, error) {
-	// 处理文件名
+	// Handle the file name
 	if fileName == "" {
 		fileName = "output.wav"
 	}
@@ -174,135 +174,135 @@ func SaveAudioToWavFile(
 	var err error
 	var currentDataSize int64 = 0
 
-	// 检查文件是否存在
+	// Check whether the file exists
 	_, err = os.Stat(fileName)
 	fileExists := !os.IsNotExist(err)
 
 	if append && fileExists {
-		// 追加模式：打开现有文件
+		// Append mode: open the existing file
 		file, err = os.OpenFile(fileName, os.O_RDWR, 0644)
 		if err != nil {
-			return "", fmt.Errorf("打开文件失败: %v", err)
+			return "", fmt.Errorf("failed to open file: %v", err)
 		}
 		defer file.Close()
 
-		// 获取当前数据大小
+		// Get the current data size
 		fileInfo, err := file.Stat()
 		if err != nil {
-			return "", fmt.Errorf("获取文件信息失败: %v", err)
+			return "", fmt.Errorf("failed to get file info: %v", err)
 		}
-		currentDataSize = fileInfo.Size() - 44 // 减去WAV头大小(44字节)
+		currentDataSize = fileInfo.Size() - 44 // Subtract the WAV header size (44 bytes)
 		if currentDataSize < 0 {
 			currentDataSize = 0
 		}
 
-		// 定位到文件末尾准备追加数据
+		// Seek to the end of the file to prepare for appending data
 		_, err = file.Seek(0, io.SeekEnd)
 		if err != nil {
-			return "", fmt.Errorf("定位文件末尾失败: %v", err)
+			return "", fmt.Errorf("failed to seek to end of file: %v", err)
 		}
 	} else {
-		// 覆写模式：删除现有文件（如果存在）并创建新文件
+		// Overwrite mode: delete the existing file (if any) and create a new one
 		if fileExists {
 			if err := os.Remove(fileName); err != nil {
-				return "", fmt.Errorf("删除现有文件失败: %v", err)
+				return "", fmt.Errorf("failed to delete existing file: %v", err)
 			}
 		}
 
-		// 创建新文件
+		// Create a new file
 		file, err = os.Create(fileName)
 		if err != nil {
-			return "", fmt.Errorf("创建文件失败: %v", err)
+			return "", fmt.Errorf("failed to create file: %v", err)
 		}
 		defer file.Close()
 
-		// 写入WAV文件头
+		// Write the WAV file header
 		if err := writeWavHeader(file, 0, sampleRate, channels, bitsPerSample); err != nil {
-			return "", fmt.Errorf("写入WAV头失败: %v", err)
+			return "", fmt.Errorf("failed to write WAV header: %v", err)
 		}
 	}
 
-	// 打开现有文件进行追加
+	// Open the existing file for appending
 	file, err = os.OpenFile(fileName, os.O_WRONLY, 0o644)
-	// 写入音频数据
+	// Write the audio data
 	_, err = file.Write(data)
 	if err != nil {
-		return "", fmt.Errorf("写入数据失败: %v", err)
+		return "", fmt.Errorf("failed to write data: %v", err)
 	}
 
-	// 更新WAV头中的数据大小
+	// Update the data size in the WAV header
 	newDataSize := currentDataSize + int64(len(data))
 	_, err = file.Seek(0, io.SeekStart)
 	if err != nil {
-		return "", fmt.Errorf("定位文件开头失败: %v", err)
+		return "", fmt.Errorf("failed to seek to start of file: %v", err)
 	}
 
 	if err := writeWavHeader(file, int(newDataSize), sampleRate, channels, bitsPerSample); err != nil {
-		return "", fmt.Errorf("更新WAV头失败: %v", err)
+		return "", fmt.Errorf("failed to update WAV header: %v", err)
 	}
 
 	return fileName, nil
 }
 
-// 写入WAV文件头
+// writeWavHeader writes the WAV file header
 func writeWavHeader(file *os.File, dataSize int, sampleRate, channels, bitsPerSample int) error {
-	// RIFF块
+	// RIFF chunk
 	header := make([]byte, 44)
 	copy(header[0:4], []byte("RIFF"))
 
-	// 文件总长度 = 数据大小 + 头部大小(36) - 8
+	// Total file length = data size + header size(36) - 8
 	fileSize := uint32(dataSize + 36)
 	header[4] = byte(fileSize)
 	header[5] = byte(fileSize >> 8)
 	header[6] = byte(fileSize >> 16)
 	header[7] = byte(fileSize >> 24)
 
-	// 文件类型
+	// File type
 	copy(header[8:12], []byte("WAVE"))
 
-	// 格式块
+	// Format chunk
 	copy(header[12:16], []byte("fmt "))
 
-	// 格式块大小(16字节)
+	// Format chunk size (16 bytes)
 	header[16] = 16
 	header[17] = 0
 	header[18] = 0
 	header[19] = 0
 
-	// 音频格式(1表示PCM)
+	// Audio format (1 means PCM)
 	header[20] = 1
 	header[21] = 0
 
-	// 通道数
+	// Number of channels
 	header[22] = byte(channels)
 	header[23] = 0
 
-	// 采样率
+	// Sample rate
 	header[24] = byte(sampleRate)
 	header[25] = byte(sampleRate >> 8)
 	header[26] = byte(sampleRate >> 16)
 	header[27] = byte(sampleRate >> 24)
 
-	// 字节率 = 采样率 × 通道数 × 位深度/8
+	// Byte rate = sample rate × channels × bit depth/8
 	byteRate := uint32(sampleRate * channels * bitsPerSample / 8)
 	header[28] = byte(byteRate)
 	header[29] = byte(byteRate >> 8)
 	header[30] = byte(byteRate >> 16)
 	header[31] = byte(byteRate >> 24)
 
-	// 块对齐 = 通道数 × 位深度/8
+	// Block align = channels × bit depth/8
 	blockAlign := uint16(channels * bitsPerSample / 8)
 	header[32] = byte(blockAlign)
 	header[33] = byte(blockAlign >> 8)
 
-	// 位深度
+	// Bit depth
 	header[34] = byte(bitsPerSample)
 	header[35] = byte(bitsPerSample >> 8)
 
-	// 数据块
+	// Data chunk
 	copy(header[36:40], []byte("data"))
 
-	// 数据大小
+	// Data size
 	header[40] = byte(dataSize)
 	header[41] = byte(dataSize >> 8)
 	header[42] = byte(dataSize >> 16)
@@ -312,29 +312,29 @@ func writeWavHeader(file *os.File, dataSize int, sampleRate, channels, bitsPerSa
 	return err
 }
 
-// 保留原来的函数，但使用新函数
+// SaveAudioToFile keeps the original function but uses the new one
 func SaveAudioToFile(data []byte, fileName string) (string, error) {
-	// 默认使用16kHz, 单声道, 16位
+	// Default to 24kHz, mono, 16-bit
 	return SaveAudioToWavFile(data, fileName, 24000, 1, 16, false)
 }
 
 func ReadPCMDataFromWavFile(filePath string) ([]byte, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("打开WAV文件失败: %v", err)
+		return nil, fmt.Errorf("failed to open WAV file: %v", err)
 	}
 	defer file.Close()
 
-	// 跳过WAV头
+	// Skip the WAV header
 	header := make([]byte, 44)
 	if _, err := file.Read(header); err != nil {
-		return nil, fmt.Errorf("读取WAV头失败: %v", err)
+		return nil, fmt.Errorf("failed to read WAV header: %v", err)
 	}
 
-	// 读取PCM数据
+	// Read the PCM data
 	pcmData, err := io.ReadAll(file)
 	if err != nil {
-		return nil, fmt.Errorf("读取PCM数据失败: %v", err)
+		return nil, fmt.Errorf("failed to read PCM data: %v", err)
 	}
 
 	return pcmData, nil
@@ -343,59 +343,59 @@ func ReadPCMDataFromWavFile(filePath string) ([]byte, error) {
 func AudioToPCMData(audioFile string) ([][]byte, float64, error) {
 	file, err := os.Open(audioFile)
 	if err != nil {
-		return nil, 0, fmt.Errorf("打开音频文件失败: %v", err)
+		return nil, 0, fmt.Errorf("failed to open audio file: %v", err)
 	}
 	defer file.Close()
 
 	decoder, err := mp3.NewDecoder(file)
 	if err != nil {
-		return nil, 0, fmt.Errorf("创建MP3解码器失败: %v", err)
+		return nil, 0, fmt.Errorf("failed to create MP3 decoder: %v", err)
 	}
 
 	mp3SampleRate := decoder.SampleRate()
-	// fmt.Println("AudioToPCMData 原始MP3采样率:", mp3SampleRate)
-	// 目标采样率设为24kHz
+	// fmt.Println("AudioToPCMData original MP3 sample rate:", mp3SampleRate)
+	// Set the target sample rate to 24kHz
 	targetSampleRate := 24000
 
-	// decoder.Length() 返回解码后的PCM数据总字节数 (16-bit little-endian stereo)
+	// decoder.Length() returns the total number of bytes of decoded PCM data (16-bit little-endian stereo)
 	pcmBytes := make([]byte, decoder.Length())
-	// ReadFull确保读取所有请求的字节，否则返回错误
+	// ReadFull ensures all requested bytes are read, otherwise it returns an error
 	if _, err := io.ReadFull(decoder, pcmBytes); err != nil {
-		// 如果 decoder.Length() 为 0, pcmBytes 为空, ReadFull 读取 0 字节, 返回 nil 错误，这是正常的。
-		// 如果 decoder.Length() > 0 且 ReadFull 返回错误, 表示未能读取完整的PCM数据。
-		return nil, 0, fmt.Errorf("读取PCM数据失败: %v", err)
+		// If decoder.Length() is 0, pcmBytes is empty, ReadFull reads 0 bytes and returns a nil error, which is normal.
+		// If decoder.Length() > 0 and ReadFull returns an error, it means the complete PCM data could not be read.
+		return nil, 0, fmt.Errorf("failed to read PCM data: %v", err)
 	}
 
-	// go-mp3 解码为 16-bit little-endian stereo PCM.
-	// pcmBytes 包含交错的立体声数据 (LRLRLR...).
-	// 每个立体声样本对 (左16位, 右16位) 占用4字节.
-	// numMonoSamples 是转换后得到的16位单声道样本的数量.
+	// go-mp3 decodes into 16-bit little-endian stereo PCM.
+	// pcmBytes contains interleaved stereo data (LRLRLR...).
+	// Each stereo sample pair (left 16-bit, right 16-bit) takes 4 bytes.
+	// numMonoSamples is the number of 16-bit mono samples after conversion.
 	numMonoSamples := len(pcmBytes) / 4
 
 	if numMonoSamples == 0 {
-		// 处理 pcmBytes 为空或数据不足以形成一个单声道样本的情况 (即少于4字节).
-		return [][]byte{}, 0, nil // 返回空数据
+		// Handle the case where pcmBytes is empty or there is not enough data for a single mono sample (i.e. fewer than 4 bytes).
+		return [][]byte{}, 0, nil // Return empty data
 	}
 
 	pcmMonoInt16 := make([]int16, numMonoSamples)
 	for i := 0; i < numMonoSamples; i++ {
-		// 从pcmBytes中提取16位小端序的左右声道样本
-		// pcmBytes[i*4+0] = 左声道低字节, pcmBytes[i*4+1] = 左声道高字节
-		// pcmBytes[i*4+2] = 右声道低字节, pcmBytes[i*4+3] = 右声道高字节
+		// Extract the 16-bit little-endian left and right channel samples from pcmBytes
+		// pcmBytes[i*4+0] = left channel low byte, pcmBytes[i*4+1] = left channel high byte
+		// pcmBytes[i*4+2] = right channel low byte, pcmBytes[i*4+3] = right channel high byte
 		leftSample := int16(uint16(pcmBytes[i*4+0]) | (uint16(pcmBytes[i*4+1]) << 8))
 		rightSample := int16(uint16(pcmBytes[i*4+2]) | (uint16(pcmBytes[i*4+3]) << 8))
 
-		// 通过平均值混合为单声道样本
-		// 使用int32进行中间求和以防止在除法前溢出
+		// Mix down to a mono sample by averaging
+		// Use int32 for the intermediate sum to prevent overflow before the division
 		pcmMonoInt16[i] = int16((int32(leftSample) + int32(rightSample)) / 2)
 	}
 
-	// 重采样到目标采样率（如果需要）
+	// Resample to the target sample rate (if needed)
 	var resampledPcmInt16 []int16
 	var finalSampleRate int
 
 	if mp3SampleRate != targetSampleRate {
-		fmt.Printf("重采样从 %dHz 到 %dHz\n", mp3SampleRate, targetSampleRate)
+		fmt.Printf("Resampling from %dHz to %dHz\n", mp3SampleRate, targetSampleRate)
 		resampledPcmInt16 = resamplePCM(pcmMonoInt16, mp3SampleRate, targetSampleRate)
 		finalSampleRate = targetSampleRate
 	} else {
@@ -403,41 +403,41 @@ func AudioToPCMData(audioFile string) ([][]byte, float64, error) {
 		finalSampleRate = mp3SampleRate
 	}
 
-	// 将 []int16 类型的单声道PCM数据转换为 []byte (仍然是16位小端序)
-	monoPcmDataBytes := make([]byte, len(resampledPcmInt16)*2) // 每个int16样本占用2字节
+	// Convert the []int16 mono PCM data to []byte (still 16-bit little-endian)
+	monoPcmDataBytes := make([]byte, len(resampledPcmInt16)*2) // Each int16 sample takes 2 bytes
 	for i, sample := range resampledPcmInt16 {
-		monoPcmDataBytes[i*2] = byte(sample)        // 低字节 (LSB)
-		monoPcmDataBytes[i*2+1] = byte(sample >> 8) // 高字节 (MSB)
+		monoPcmDataBytes[i*2] = byte(sample)        // Low byte (LSB)
+		monoPcmDataBytes[i*2+1] = byte(sample >> 8) // High byte (MSB)
 	}
 
-	// 音频播放时长（基于重采样后的数据）
-	duration := float64(len(resampledPcmInt16)) / float64(finalSampleRate) // 单声道PCM数据的时长 (秒)
+	// Audio playback duration (based on the resampled data)
+	duration := float64(len(resampledPcmInt16)) / float64(finalSampleRate) // Duration of the mono PCM data (seconds)
 
-	// 函数签名要求返回 [][]byte.
-	// 将整个单声道PCM数据作为外部切片中的单个段/切片返回.
+	// The function signature requires returning [][]byte.
+	// Return the entire mono PCM data as a single segment/slice in the outer slice.
 	return [][]byte{monoPcmDataBytes}, duration, nil
 }
 
-// AudioToOpusData 将音频文件转换为Opus数据块
+// AudioToOpusData converts an audio file to Opus data chunks
 func AudioToOpusData(audioFile string) ([][]byte, float64, error) {
 	var pcmData [][]byte
 	var err error
 	var duration float64
 
-	// 获取采样率 (固定使用24000Hz作为Opus编码的采样率)
-	// 如果采样率不是24000Hz，PCMSlicesToOpusData会处理重采样
+	// Get the sample rate (fixed at 24000Hz as the Opus encoding sample rate)
+	// If the sample rate is not 24000Hz, PCMSlicesToOpusData will handle the resampling
 	opusSampleRate := 24000
 	channels := 1
 
 	if strings.HasSuffix(audioFile, ".mp3") {
-		// 先将MP3转为PCM
+		// First convert the MP3 to PCM
 		pcmData, duration, err = AudioToPCMData(audioFile)
 		if err != nil {
-			return nil, 0, fmt.Errorf("PCM转换失败: %v", err)
+			return nil, 0, fmt.Errorf("PCM conversion failed: %v", err)
 		}
 
 		if len(pcmData) == 0 {
-			return nil, 0, fmt.Errorf("PCM转换结果为空")
+			return nil, 0, fmt.Errorf("PCM conversion result is empty")
 		}
 
 	} else {
@@ -446,16 +446,16 @@ func AudioToOpusData(audioFile string) ([][]byte, float64, error) {
 		pcmData = [][]byte{singlePcmData}
 	}
 
-	// 将PCM转换为Opus
+	// Convert the PCM to Opus
 	opusData, err := PCMSlicesToOpusData(pcmData, opusSampleRate, channels, 0)
 	if err != nil {
-		return nil, 0, fmt.Errorf("PCM转Opus失败: %v", err)
+		return nil, 0, fmt.Errorf("PCM-to-Opus conversion failed: %v", err)
 	}
 
 	return opusData, duration, nil
 }
 
-// CopyAudioFile 复制音频文件
+// CopyAudioFile copies an audio file
 func CopyAudioFile(src, dst string) error {
 	source, err := os.Open(src)
 	if err != nil {
@@ -473,97 +473,97 @@ func CopyAudioFile(src, dst string) error {
 	return err
 }
 
-// SaveAudioFile 保存音频数据到文件
+// SaveAudioFile saves audio data to a file
 func SaveAudioFile(data []byte, filename string) error {
 	dir := filepath.Dir(filename)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return fmt.Errorf("创建目录失败: %v", err)
+		return fmt.Errorf("failed to create directory: %v", err)
 	}
 
 	f, err := os.Create(filename)
 	if err != nil {
-		return fmt.Errorf("创建文件失败: %v", err)
+		return fmt.Errorf("failed to create file: %v", err)
 	}
 	defer f.Close()
 
 	if _, err := f.Write(data); err != nil {
-		return fmt.Errorf("写入音频数据失败: %v", err)
+		return fmt.Errorf("failed to write audio data: %v", err)
 	}
 
 	return nil
 }
 
-// PCMToOpusData 将PCM数据编码为Opus格式
+// PCMToOpusData encodes PCM data into Opus format
 func PCMToOpusData(pcmData []byte, sampleRate int, channels int) ([]byte, error) {
 	if len(pcmData) == 0 {
-		return nil, fmt.Errorf("PCM数据为空")
+		return nil, fmt.Errorf("PCM data is empty")
 	}
 
-	// 检查采样率是否支持
+	// Check whether the sample rate is supported
 	supportedRates := map[int]bool{8000: true, 12000: true, 16000: true, 24000: true, 48000: true}
 	if !supportedRates[sampleRate] {
-		return nil, fmt.Errorf("采样率 %dHz 不被Opus支持，仅支持8000/12000/16000/24000/48000Hz", sampleRate)
+		return nil, fmt.Errorf("sample rate %dHz is not supported by Opus; only 8000/12000/16000/24000/48000Hz are supported", sampleRate)
 	}
 
-	// 确保PCM数据长度是偶数，这是16位PCM所必需的
+	// Make sure the PCM data length is even, which is required for 16-bit PCM
 	if len(pcmData)%2 != 0 {
-		return nil, fmt.Errorf("PCM数据长度必须是偶数（16位采样）")
+		return nil, fmt.Errorf("PCM data length must be even (16-bit samples)")
 	}
 
-	// 将PCM字节转换为int16样本
+	// Convert the PCM bytes to int16 samples
 	numSamples := len(pcmData) / 2 / channels
 	pcmInt16 := make([]int16, numSamples*channels)
 	for i := 0; i < numSamples*channels; i++ {
-		// 读取小端序的16位样本
+		// Read the little-endian 16-bit sample
 		pcmInt16[i] = int16(uint16(pcmData[i*2]) | (uint16(pcmData[i*2+1]) << 8))
 	}
 
-	// 计算每帧包含的样本数（60ms帧）
-	samplesPerFrame := (sampleRate * 60) / 1000                         // 60ms帧
-	framesCount := (numSamples + samplesPerFrame - 1) / samplesPerFrame // 向上取整
+	// Compute the number of samples per frame (60ms frame)
+	samplesPerFrame := (sampleRate * 60) / 1000                         // 60ms frame
+	framesCount := (numSamples + samplesPerFrame - 1) / samplesPerFrame // Round up
 
-	// 根据帧大小调整样本数组的大小
+	// Adjust the sample array size based on the frame size
 	paddedSampleCount := framesCount * samplesPerFrame
 	if paddedSampleCount > numSamples {
-		// 扩展样本数组到帧边界
+		// Extend the sample array to the frame boundary
 		paddedSamples := make([]int16, paddedSampleCount*channels)
 		copy(paddedSamples, pcmInt16)
 		pcmInt16 = paddedSamples
 	}
 
-	// 将int16样本转回为字节数组
+	// Convert the int16 samples back to a byte array
 	adjustedPcmData := make([]byte, len(pcmInt16)*2)
 	for i, sample := range pcmInt16 {
-		adjustedPcmData[i*2] = byte(sample)        // 低字节
-		adjustedPcmData[i*2+1] = byte(sample >> 8) // 高字节
+		adjustedPcmData[i*2] = byte(sample)        // Low byte
+		adjustedPcmData[i*2+1] = byte(sample >> 8) // High byte
 	}
 
-	// 创建Opus编码器
+	// Create the Opus encoder
 	encoder, err := opus.CreateOpusEncoder(&opus.OpusEncoderConfig{
 		SampleRate:    sampleRate,
 		MaxChannels:   channels,
 		Application:   opus.AppVoIP,
-		FrameDuration: opus.Framesize60Ms, // 使用60ms帧长
+		FrameDuration: opus.Framesize60Ms, // Use a 60ms frame length
 	})
 	if err != nil {
-		return nil, fmt.Errorf("创建Opus编码器失败: %v", err)
+		return nil, fmt.Errorf("failed to create Opus encoder: %v", err)
 	}
 	defer encoder.Close()
 
-	// 输出缓冲区
+	// Output buffer
 	outBuf := make([]byte, 4096)
 
-	// 编码PCM数据到Opus
+	// Encode the PCM data into Opus
 	n, err := encoder.Encode(adjustedPcmData, outBuf)
 	if err != nil {
-		return nil, fmt.Errorf("Opus编码失败: %v", err)
+		return nil, fmt.Errorf("Opus encoding failed: %v", err)
 	}
 
-	// 返回实际编码的数据
+	// Return the actually encoded data
 	return outBuf[:n], nil
 }
 
-// PCMToOpusFile 将PCM数据编码为Opus并保存到文件
+// PCMToOpusFile encodes PCM data into Opus and saves it to a file
 func PCMToOpusFile(pcmData []byte, filename string, sampleRate int, channels int) error {
 	opusData, err := PCMToOpusData(pcmData, sampleRate, channels)
 	if err != nil {
@@ -573,94 +573,94 @@ func PCMToOpusFile(pcmData []byte, filename string, sampleRate int, channels int
 	return SaveAudioFile(opusData, filename)
 }
 
-// MP3ToOpusData 将MP3文件转换为Opus格式
+// MP3ToOpusData converts an MP3 file to Opus format
 func MP3ToOpusData(audioFile string) ([]byte, error) {
-	// 先将MP3转为PCM
+	// First convert the MP3 to PCM
 	pcmDataSlices, err := MP3ToPCMData(audioFile)
 	if err != nil {
-		return nil, fmt.Errorf("MP3转PCM失败: %v", err)
+		return nil, fmt.Errorf("MP3-to-PCM conversion failed: %v", err)
 	}
 
 	if len(pcmDataSlices) == 0 || len(pcmDataSlices[0]) == 0 {
-		return nil, fmt.Errorf("MP3解码后PCM数据为空")
+		return nil, fmt.Errorf("PCM data is empty after MP3 decoding")
 	}
 
-	// 打开MP3文件获取采样率
+	// Open the MP3 file to get the sample rate
 	file, err := os.Open(audioFile)
 	if err != nil {
-		return nil, fmt.Errorf("打开MP3文件失败: %v", err)
+		return nil, fmt.Errorf("failed to open MP3 file: %v", err)
 	}
 	defer file.Close()
 
 	decoder, err := mp3.NewDecoder(file)
 	if err != nil {
-		return nil, fmt.Errorf("创建MP3解码器失败: %v", err)
+		return nil, fmt.Errorf("failed to create MP3 decoder: %v", err)
 	}
 
-	// 获取采样率
+	// Get the sample rate
 	sampleRate := decoder.SampleRate()
-	fmt.Println("MP3采样率:", sampleRate)
+	fmt.Println("MP3 sample rate:", sampleRate)
 
-	// 确保PCM数据长度是偶数
+	// Make sure the PCM data length is even
 	pcmData := pcmDataSlices[0]
 	if len(pcmData)%2 != 0 {
-		return nil, fmt.Errorf("PCM数据长度必须是偶数（16位采样）")
+		return nil, fmt.Errorf("PCM data length must be even (16-bit samples)")
 	}
 
-	// 将PCM字节转换为int16样本
-	numSamples := len(pcmData) / 2 // 单通道
+	// Convert the PCM bytes to int16 samples
+	numSamples := len(pcmData) / 2 // Mono
 	pcmInt16 := make([]int16, numSamples)
 	for i := 0; i < numSamples; i++ {
-		// 读取小端序的16位样本
+		// Read the little-endian 16-bit sample
 		pcmInt16[i] = int16(uint16(pcmData[i*2]) | (uint16(pcmData[i*2+1]) << 8))
 	}
 
-	// 计算每帧包含的样本数（60ms帧）
-	samplesPerFrame := (sampleRate * 60) / 1000                         // 60ms帧
-	framesCount := (numSamples + samplesPerFrame - 1) / samplesPerFrame // 向上取整
+	// Compute the number of samples per frame (60ms frame)
+	samplesPerFrame := (sampleRate * 60) / 1000                         // 60ms frame
+	framesCount := (numSamples + samplesPerFrame - 1) / samplesPerFrame // Round up
 
-	// 根据帧大小调整样本数组的大小
+	// Adjust the sample array size based on the frame size
 	paddedSampleCount := framesCount * samplesPerFrame
 	if paddedSampleCount > numSamples {
-		// 扩展样本数组到帧边界
+		// Extend the sample array to the frame boundary
 		paddedSamples := make([]int16, paddedSampleCount)
 		copy(paddedSamples, pcmInt16)
 		pcmInt16 = paddedSamples
 	}
 
-	// 将int16样本转回为字节数组
+	// Convert the int16 samples back to a byte array
 	adjustedPcmData := make([]byte, len(pcmInt16)*2)
 	for i, sample := range pcmInt16 {
-		adjustedPcmData[i*2] = byte(sample)        // 低字节
-		adjustedPcmData[i*2+1] = byte(sample >> 8) // 高字节
+		adjustedPcmData[i*2] = byte(sample)        // Low byte
+		adjustedPcmData[i*2+1] = byte(sample >> 8) // High byte
 	}
 
-	// 创建Opus编码器
+	// Create the Opus encoder
 	encoder, err := opus.CreateOpusEncoder(&opus.OpusEncoderConfig{
 		SampleRate:    sampleRate,
-		MaxChannels:   1, // 单声道
+		MaxChannels:   1, // Mono
 		Application:   opus.AppVoIP,
-		FrameDuration: opus.Framesize60Ms, // 使用60ms帧长
+		FrameDuration: opus.Framesize60Ms, // Use a 60ms frame length
 	})
 	if err != nil {
-		return nil, fmt.Errorf("创建Opus编码器失败: %v", err)
+		return nil, fmt.Errorf("failed to create Opus encoder: %v", err)
 	}
 	defer encoder.Close()
 
-	// 输出缓冲区
+	// Output buffer
 	outBuf := make([]byte, 4096)
 
-	// 编码PCM数据到Opus
+	// Encode the PCM data into Opus
 	n, err := encoder.Encode(adjustedPcmData, outBuf)
 	if err != nil {
-		return nil, fmt.Errorf("Opus编码失败: %v", err)
+		return nil, fmt.Errorf("Opus encoding failed: %v", err)
 	}
 
-	// 返回实际编码的数据
+	// Return the actually encoded data
 	return outBuf[:n], nil
 }
 
-// MP3ToOpusFile 将MP3文件转换为Opus并保存到文件
+// MP3ToOpusFile converts an MP3 file to Opus and saves it to a file
 func MP3ToOpusFile(inputFile, outputFile string, bitrate int) error {
 	opusData, err := MP3ToOpusData(inputFile)
 	if err != nil {
@@ -670,38 +670,38 @@ func MP3ToOpusFile(inputFile, outputFile string, bitrate int) error {
 	return SaveAudioFile(opusData, outputFile)
 }
 
-// PCMSlicesToOpusData 将PCM数据切片批量编码为Opus格式
+// PCMSlicesToOpusData batch-encodes PCM data slices into Opus format
 func PCMSlicesToOpusData(pcmSlices [][]byte, sampleRate int, channels int, bitrate int) ([][]byte, error) {
 	if len(pcmSlices) == 0 {
-		return nil, fmt.Errorf("PCM数据切片为空")
+		return nil, fmt.Errorf("PCM data slices are empty")
 	}
 
-	// 检查采样率是否支持
+	// Check whether the sample rate is supported
 	supportedRates := map[int]bool{8000: true, 12000: true, 16000: true, 24000: true, 48000: true}
 	if !supportedRates[sampleRate] {
-		return nil, fmt.Errorf("采样率 %dHz 不被Opus支持，仅支持8000/12000/16000/24000/48000Hz", sampleRate)
+		return nil, fmt.Errorf("sample rate %dHz is not supported by Opus; only 8000/12000/16000/24000/48000Hz are supported", sampleRate)
 	}
 
-	// 创建Opus编码器
+	// Create the Opus encoder
 	encoder, err := opus.CreateOpusEncoder(&opus.OpusEncoderConfig{
 		SampleRate:    sampleRate,
 		MaxChannels:   channels,
 		Application:   opus.AppVoIP,
-		FrameDuration: opus.Framesize60Ms, // 使用60ms帧长
+		FrameDuration: opus.Framesize60Ms, // Use a 60ms frame length
 	})
 	if err != nil {
-		return nil, fmt.Errorf("创建Opus编码器失败: %v", err)
+		return nil, fmt.Errorf("failed to create Opus encoder: %v", err)
 	}
 	defer encoder.Close()
 
-	// 所有编码后的Opus数据包
+	// All encoded Opus data packets
 	var allOpusPackets [][]byte
 
-	// 计算每帧样本数 (60ms帧)
-	samplesPerFrame := (sampleRate * 60) / 1000 // 60ms帧
-	// 每个样本的字节数 (16位 = 2字节)
+	// Compute the number of samples per frame (60ms frame)
+	samplesPerFrame := (sampleRate * 60) / 1000 // 60ms frame
+	// Bytes per sample (16-bit = 2 bytes)
 	bytesPerSample := 2 * channels
-	// 每帧字节数
+	// Bytes per frame
 	bytesPerFrame := samplesPerFrame * bytesPerSample
 
 	for _, pcmSlice := range pcmSlices {
@@ -709,66 +709,66 @@ func PCMSlicesToOpusData(pcmSlices [][]byte, sampleRate int, channels int, bitra
 			continue
 		}
 
-		// 确保PCM数据长度是偶数
+		// Make sure the PCM data length is even
 		if len(pcmSlice)%2 != 0 {
-			pcmSlice = pcmSlice[:len(pcmSlice)-1] // 截断最后一个字节
+			pcmSlice = pcmSlice[:len(pcmSlice)-1] // Truncate the last byte
 			if len(pcmSlice) == 0 {
 				continue
 			}
 		}
 
-		// 计算这个PCM片段可以分成多少帧
+		// Compute how many frames this PCM segment can be split into
 		numFrames := len(pcmSlice) / bytesPerFrame
 		if len(pcmSlice)%bytesPerFrame != 0 {
-			numFrames++ // 如果有剩余数据，额外增加一帧
+			numFrames++ // If there is leftover data, add one extra frame
 		}
 
-		// 逐帧处理PCM数据
+		// Process the PCM data frame by frame
 		for frameIdx := 0; frameIdx < numFrames; frameIdx++ {
 			frameStart := frameIdx * bytesPerFrame
 			frameEnd := frameStart + bytesPerFrame
 
-			// 确保不越界
+			// Make sure we don't go out of bounds
 			if frameEnd > len(pcmSlice) {
 				frameEnd = len(pcmSlice)
 			}
 
-			// 当前帧的PCM数据
+			// The PCM data of the current frame
 			framePcm := pcmSlice[frameStart:frameEnd]
 
-			// 如果最后一帧数据不足，需要填充静音数据到完整帧大小
+			// If the last frame is incomplete, pad it with silence to the full frame size
 			if len(framePcm) < bytesPerFrame {
 				paddedFrame := make([]byte, bytesPerFrame)
 				copy(paddedFrame, framePcm)
 				framePcm = paddedFrame
 			}
 
-			// 分配输出缓冲区 (Opus编码后的数据通常比PCM小)
+			// Allocate the output buffer (Opus-encoded data is usually smaller than PCM)
 			outBuf := make([]byte, len(framePcm))
 
-			// 编码这一帧PCM数据到Opus
+			// Encode this frame of PCM data into Opus
 			n, err := encoder.Encode(framePcm, outBuf)
 			if err != nil {
-				continue // 跳过这一帧，继续处理下一帧
+				continue // Skip this frame and continue with the next one
 			}
 
 			if n == 0 {
-				continue // 跳过空帧
+				continue // Skip empty frames
 			}
 
-			// 将编码后的Opus数据添加到结果集
+			// Add the encoded Opus data to the result set
 			allOpusPackets = append(allOpusPackets, outBuf[:n])
 		}
 	}
 
 	if len(allOpusPackets) == 0 {
-		return nil, fmt.Errorf("所有PCM切片编码后为空")
+		return nil, fmt.Errorf("all PCM slices are empty after encoding")
 	}
 
 	return allOpusPackets, nil
 }
 
-// resamplePCM 使用线性插值对PCM数据进行重采样
+// resamplePCM resamples PCM data using linear interpolation
 func resamplePCM(input []int16, inputSampleRate, outputSampleRate int) []int16 {
 	if inputSampleRate == outputSampleRate {
 		return input
@@ -779,7 +779,7 @@ func resamplePCM(input []int16, inputSampleRate, outputSampleRate int) []int16 {
 		return []int16{}
 	}
 
-	// 计算重采样比率
+	// Compute the resampling ratio
 	ratio := float64(inputSampleRate) / float64(outputSampleRate)
 	outputLength := int(float64(inputLength) / ratio)
 
@@ -790,18 +790,18 @@ func resamplePCM(input []int16, inputSampleRate, outputSampleRate int) []int16 {
 	output := make([]int16, outputLength)
 
 	for i := 0; i < outputLength; i++ {
-		// 计算在输入数组中的位置
+		// Compute the position in the input array
 		srcIndex := float64(i) * ratio
 
-		// 获取整数和小数部分
+		// Get the integer and fractional parts
 		index := int(srcIndex)
 		fraction := srcIndex - float64(index)
 
 		if index >= inputLength-1 {
-			// 如果超出边界，使用最后一个样本
+			// If out of bounds, use the last sample
 			output[i] = input[inputLength-1]
 		} else {
-			// 线性插值
+			// Linear interpolation
 			sample1 := float64(input[index])
 			sample2 := float64(input[index+1])
 			interpolated := sample1 + fraction*(sample2-sample1)

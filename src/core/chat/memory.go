@@ -1,13 +1,13 @@
 package chat
 
-// MemoryInterface 定义对话记忆管理接口
+// MemoryInterface defines the conversation-memory management interface
 type MemoryInterface interface {
-	// QueryMemory 查询相关记忆
+	// QueryMemory queries relevant memory
 	QueryMemory(query string) (string, error)
 
-	// SaveMemory 保存对话记忆
+	// SaveMemory saves conversation memory
 	SaveMemory(dialogue []Message) error
 
-	// ClearMemory 清空记忆
+	// ClearMemory clears the memory
 	ClearMemory() error
 }

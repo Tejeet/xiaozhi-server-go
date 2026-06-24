@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-// LogLevel 日志级别
+// LogLevel is the log level
 type LogLevel string
 
 const (
@@ -24,7 +24,7 @@ const (
 )
 
 const (
-	LogRetentionDays = 7 // 日志保留天数，硬编码7天
+	LogRetentionDays = 7 // Number of days to retain logs, hard-coded to 7 days
 )
 
 var DefaultLogger *Logger
@@ -36,7 +36,7 @@ type LogCfg struct {
 	LogFile   string `yaml:"log_file" json:"log_file"`
 }
 
-// CustomTextHandler 自定义文本处理器，支持彩色输出和格式化
+// CustomTextHandler is a custom text handler that supports colored output and formatting
 type CustomTextHandler struct {
 	writer io.Writer
 	level  slog.Level
@@ -45,15 +45,15 @@ type CustomTextHandler struct {
 
 var (
 	colorReset  = "\x1b[0m"
-	colorTime   = "\x1b[93m" // 时间：浅黄色 (Bright Yellow)
-	colorDebug  = "\x1b[36m" // DEBUG：青色
-	colorInfo   = "\x1b[32m" // INFO：绿色
-	colorWarn   = "\x1b[33m" // WARN：黄色
-	colorError  = "\x1b[31m" // ERROR：红色
-	colorASR    = "\x1b[35m" // ASR：品红
-	colorLLM    = "\x1b[34m" // LLM：蓝色
-	colorTTS    = "\x1b[95m" // TTS：亮品红
-	colorTiming = "\x1b[92m" // Timing：亮绿色
+	colorTime   = "\x1b[93m" // Time: bright yellow
+	colorDebug  = "\x1b[36m" // DEBUG: cyan
+	colorInfo   = "\x1b[32m" // INFO: green
+	colorWarn   = "\x1b[33m" // WARN: yellow
+	colorError  = "\x1b[31m" // ERROR: red
+	colorASR    = "\x1b[35m" // ASR: magenta
+	colorLLM    = "\x1b[34m" // LLM: blue
+	colorTTS    = "\x1b[95m" // TTS: bright magenta
+	colorTiming = "\x1b[92m" // Timing: bright green
 )
 
 func (h *CustomTextHandler) Enabled(ctx context.Context, level slog.Level) bool {
@@ -64,13 +64,13 @@ func (h *CustomTextHandler) Handle(ctx context.Context, r slog.Record) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	// 获取时间戳
+	// Get the timestamp
 	timeStr := r.Time.Format("2006-01-02 15:04:05.000")
 
-	// 获取日志级别
+	// Get the log level
 	levelStr := r.Level.String()
 
-	// 应用颜色
+	// Apply color
 	var levelColor string
 	switch r.Level {
 	case slog.LevelDebug:
@@ -85,7 +85,7 @@ func (h *CustomTextHandler) Handle(ctx context.Context, r slog.Record) error {
 		levelColor = colorReset
 	}
 
-	// 检查是否是特殊阶段日志
+	// Check whether it is a special-stage log
 	var stageColor string
 	var isStageLog bool
 	msg := r.Message
@@ -104,22 +104,22 @@ func (h *CustomTextHandler) Handle(ctx context.Context, r slog.Record) error {
 		isStageLog = true
 	}
 
-	// 构建输出
+	// Build the output
 	var output string
 	if isStageLog {
-		// 阶段日志格式: [时间] [阶段] 消息
+		// Stage log format: [time] [stage] message
 		output = fmt.Sprintf("%s[%s]%s %s%s%s",
 			colorTime, timeStr, colorReset,
 			stageColor, msg, colorReset)
 	} else {
-		// 普通日志格式: [时间] [级别] 消息
+		// Regular log format: [time] [level] message
 		output = fmt.Sprintf("%s[%s]%s %s[%s]%s %s",
 			colorTime, timeStr, colorReset,
 			levelColor, levelStr, colorReset,
 			msg)
 	}
 
-	// 添加属性（如果有）
+	// Add attributes (if any)
 	if r.NumAttrs() > 0 {
 		output += " {"
 		r.Attrs(func(a slog.Attr) bool {
@@ -135,26 +135,26 @@ func (h *CustomTextHandler) Handle(ctx context.Context, r slog.Record) error {
 }
 
 func (h *CustomTextHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
-	return h // 简化实现
+	return h // Simplified implementation
 }
 
 func (h *CustomTextHandler) WithGroup(name string) slog.Handler {
-	return h // 简化实现
+	return h // Simplified implementation
 }
 
-// Logger 日志接口实现
+// Logger is the logging interface implementation
 type Logger struct {
 	config      *LogCfg
-	jsonLogger  *slog.Logger // 文件JSON输出
-	textLogger  *slog.Logger // 控制台文本输出
+	jsonLogger  *slog.Logger // File JSON output
+	textLogger  *slog.Logger // Console text output
 	logFile     *os.File
-	currentDate string        // 当前日期 YYYY-MM-DD
-	mu          sync.RWMutex  // 读写锁保护
-	ticker      *time.Ticker  // 定时器
-	stopCh      chan struct{} // 停止信号
+	currentDate string        // Current date YYYY-MM-DD
+	mu          sync.RWMutex  // Read-write lock protection
+	ticker      *time.Ticker  // Timer
+	stopCh      chan struct{} // Stop signal
 }
 
-// configLogLevelToSlogLevel 将配置中的日志级别转换为slog.Level
+// configLogLevelToSlogLevel converts the log level from the config to a slog.Level
 func configLogLevelToSlogLevel(configLevel string) slog.Level {
 	switch strings.ToLower(configLevel) {
 	case "debug":
@@ -170,35 +170,35 @@ func configLogLevelToSlogLevel(configLevel string) slog.Level {
 	}
 }
 
-// NewLogger 创建新的日志记录器
+// NewLogger creates a new logger
 func NewLogger(config *LogCfg) (*Logger, error) {
-	// 确保日志目录存在
+	// Make sure the log directory exists
 	if err := os.MkdirAll(config.LogDir, 0o755); err != nil {
-		return nil, fmt.Errorf("创建日志目录失败: %v", err)
+		return nil, fmt.Errorf("failed to create log directory: %v", err)
 	}
 
-	// 打开或创建日志文件
+	// Open or create the log file
 	logPath := filepath.Join(config.LogDir, config.LogFile)
 	file, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
-		return nil, fmt.Errorf("打开日志文件失败: %v", err)
+		return nil, fmt.Errorf("failed to open log file: %v", err)
 	}
 
-	// 设置slog级别
+	// Set the slog level
 	slogLevel := configLogLevelToSlogLevel(config.LogLevel)
 
-	// 创建JSON处理器（用于文件输出）
+	// Create the JSON handler (for file output)
 	jsonHandler := slog.NewJSONHandler(file, &slog.HandlerOptions{
 		Level: slogLevel,
 	})
 
-	// 创建自定义文本处理器（用于控制台输出）
+	// Create the custom text handler (for console output)
 	customHandler := &CustomTextHandler{
 		writer: os.Stdout,
 		level:  slogLevel,
 	}
 
-	// 创建logger实例
+	// Create the logger instances
 	jsonLogger := slog.New(jsonHandler)
 	textLogger := slog.New(customHandler)
 
@@ -211,7 +211,7 @@ func NewLogger(config *LogCfg) (*Logger, error) {
 		stopCh:      make(chan struct{}),
 	}
 
-	// 启动日志轮转检查器
+	// Start the log-rotation checker
 	logger.startRotationChecker()
 	if DefaultLogger == nil {
 		DefaultLogger = logger
@@ -220,9 +220,9 @@ func NewLogger(config *LogCfg) (*Logger, error) {
 	return logger, nil
 }
 
-// startRotationChecker 启动定时检查器
+// startRotationChecker starts the periodic checker
 func (l *Logger) startRotationChecker() {
-	l.ticker = time.NewTicker(1 * time.Minute) // 每分钟检查一次
+	l.ticker = time.NewTicker(1 * time.Minute) // Check once per minute
 	go func() {
 		for {
 			select {
@@ -235,7 +235,7 @@ func (l *Logger) startRotationChecker() {
 	}()
 }
 
-// checkAndRotate 检查并执行轮转
+// checkAndRotate checks and performs rotation
 func (l *Logger) checkAndRotate() {
 	today := time.Now().Format("2006-01-02")
 	if today != l.currentDate {
@@ -244,67 +244,67 @@ func (l *Logger) checkAndRotate() {
 	}
 }
 
-// rotateLogFile 执行日志轮转
+// rotateLogFile performs log rotation
 func (l *Logger) rotateLogFile(newDate string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	// 关闭当前日志文件
+	// Close the current log file
 	if l.logFile != nil {
 		l.logFile.Close()
 	}
 
-	// 构建旧文件名和新文件名
+	// Build the old and new file names
 	logDir := l.config.LogDir
 	currentLogPath := filepath.Join(logDir, l.config.LogFile)
 
-	// 生成带日期的文件名
+	// Generate a file name with the date
 	baseFileName := strings.TrimSuffix(l.config.LogFile, filepath.Ext(l.config.LogFile))
 	ext := filepath.Ext(l.config.LogFile)
 	archivedLogPath := filepath.Join(logDir, fmt.Sprintf("%s-%s%s", baseFileName, l.currentDate, ext))
 
-	// 重命名当前日志文件为带日期的文件
+	// Rename the current log file to the dated file
 	if _, err := os.Stat(currentLogPath); err == nil {
 		if err := os.Rename(currentLogPath, archivedLogPath); err != nil {
-			// 如果重命名失败，记录到控制台
-			l.textLogger.Error("重命名日志文件失败", slog.String("error", err.Error()))
+			// If the rename fails, log it to the console
+			l.textLogger.Error("failed to rename log file", slog.String("error", err.Error()))
 		}
 	}
 
-	// 创建新的日志文件
+	// Create the new log file
 	file, err := os.OpenFile(currentLogPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
-		l.textLogger.Error("创建新日志文件失败", slog.String("error", err.Error()))
+		l.textLogger.Error("failed to create new log file", slog.String("error", err.Error()))
 		return
 	}
 
-	// 更新logger配置
+	// Update the logger config
 	l.logFile = file
 	l.currentDate = newDate
 
-	// 重新创建JSON处理器
+	// Re-create the JSON handler
 	slogLevel := configLogLevelToSlogLevel(l.config.LogLevel)
 	jsonHandler := slog.NewJSONHandler(file, &slog.HandlerOptions{
 		Level: slogLevel,
 	})
 	l.jsonLogger = slog.New(jsonHandler)
 
-	// 记录轮转信息
-	l.textLogger.Info("日志文件已轮转", slog.String("new_date", newDate))
+	// Log the rotation info
+	l.textLogger.Info("log file rotated", slog.String("new_date", newDate))
 }
 
-// cleanOldLogs 清理旧日志文件
+// cleanOldLogs cleans up old log files
 func (l *Logger) cleanOldLogs() {
 	logDir := l.config.LogDir
 
-	// 读取日志目录
+	// Read the log directory
 	entries, err := os.ReadDir(logDir)
 	if err != nil {
-		l.textLogger.Error("读取日志目录失败", slog.String("error", err.Error()))
+		l.textLogger.Error("failed to read log directory", slog.String("error", err.Error()))
 		return
 	}
 
-	// 计算保留截止日期
+	// Compute the retention cutoff date
 	cutoffDate := time.Now().AddDate(0, 0, -LogRetentionDays)
 	baseFileName := strings.TrimSuffix(l.config.LogFile, filepath.Ext(l.config.LogFile))
 	ext := filepath.Ext(l.config.LogFile)
@@ -315,83 +315,83 @@ func (l *Logger) cleanOldLogs() {
 		}
 
 		fileName := entry.Name()
-		// 检查是否是带日期的日志文件格式：server-YYYY-MM-DD.log
+		// Check whether it is a dated log file in the format: server-YYYY-MM-DD.log
 		if strings.HasPrefix(fileName, baseFileName+"-") && strings.HasSuffix(fileName, ext) {
-			// 提取日期部分
+			// Extract the date part
 			dateStr := strings.TrimPrefix(fileName, baseFileName+"-")
 			dateStr = strings.TrimSuffix(dateStr, ext)
 
-			// 解析日期
+			// Parse the date
 			fileDate, err := time.Parse("2006-01-02", dateStr)
 			if err != nil {
-				continue // 如果日期格式不正确，跳过
+				continue // If the date format is incorrect, skip
 			}
 
-			// 如果文件日期早于截止日期，删除文件
+			// If the file date is before the cutoff date, delete the file
 			if fileDate.Before(cutoffDate) {
 				filePath := filepath.Join(logDir, fileName)
 				if err := os.Remove(filePath); err != nil {
-					l.textLogger.Error("删除旧日志文件失败",
+					l.textLogger.Error("failed to delete old log file",
 						slog.String("file", fileName),
 						slog.String("error", err.Error()))
 				} else {
-					l.textLogger.Info("已删除旧日志文件", slog.String("file", fileName))
+					l.textLogger.Info("deleted old log file", slog.String("file", fileName))
 				}
 			}
 		}
 	}
 }
 
-// Close 关闭日志文件
+// Close closes the log file
 func (l *Logger) Close() error {
-	// 停止定时器
+	// Stop the timer
 	if l.ticker != nil {
 		l.ticker.Stop()
 	}
-	// 发送停止信号
+	// Send the stop signal
 	close(l.stopCh)
-	// 关闭日志文件
+	// Close the log file
 	if l.logFile != nil {
 		return l.logFile.Close()
 	}
 	return nil
 }
 
-// log 通用日志记录函数（内部使用）
+// log is the generic logging function (internal use)
 func (l *Logger) log(level slog.Level, msg string, fields ...interface{}) {
-	// 使用读锁保护并发访问
+	// Use a read lock to protect concurrent access
 	l.mu.RLock()
 	defer l.mu.RUnlock()
 
-	// 构建slog属性
+	// Build the slog attributes
 	var attrs []slog.Attr
 	if len(fields) > 0 && fields[0] != nil {
-		// 处理fields参数
+		// Handle the fields parameter
 		if fieldsMap, ok := fields[0].(map[string]interface{}); ok {
-			// 提取并排序键
+			// Extract and sort the keys
 			keys := make([]string, 0, len(fieldsMap))
 			for k := range fieldsMap {
 				keys = append(keys, k)
 			}
 			sort.Strings(keys)
 
-			// 按排序后的键顺序添加属性
+			// Add attributes in sorted key order
 			for _, k := range keys {
 				attrs = append(attrs, slog.Any(k, fieldsMap[k]))
 			}
 		} else {
-			// 如果不是map，直接作为fields字段
+			// If it is not a map, add it directly as the "fields" field
 			attrs = append(attrs, slog.Any("fields", fields[0]))
 		}
 	}
 
-	// 同时写入文件（JSON）和控制台（文本）
+	// Write to both the file (JSON) and the console (text)
 	ctx := context.Background()
 	l.jsonLogger.LogAttrs(ctx, level, msg, attrs...)
 	l.textLogger.LogAttrs(ctx, level, msg, attrs...)
 }
 
-// Debug 记录调试级别日志
+// Debug logs at the debug level
 func (l *Logger) Debug(msg string, args ...interface{}) {
 	if l.config.LogLevel == "DEBUG" {
 		if len(args) > 0 && containsFormatPlaceholders(msg) {
@@ -407,20 +407,20 @@ func containsFormatPlaceholders(s string) bool {
 	return strings.Contains(s, "%")
 }
 
-// Info 记录信息级别日志
+// Info logs at the info level
 func (l *Logger) Info(msg string, args ...interface{}) {
-	// 检测是否为格式化模式
+	// Detect whether it is in formatting mode
 	if len(args) > 0 && containsFormatPlaceholders(msg) {
-		// 格式化模式：类似 Info
+		// Formatting mode: similar to Info
 		formattedMsg := fmt.Sprintf(msg, args...)
 		l.log(slog.LevelInfo, formattedMsg)
 	} else {
-		// 结构化模式：原有方式
+		// Structured mode: the original way
 		l.log(slog.LevelInfo, msg, args...)
 	}
 }
 
-// Warn 记录警告级别日志
+// Warn logs at the warning level
 func (l *Logger) Warn(msg string, args ...interface{}) {
 	if len(args) > 0 && containsFormatPlaceholders(msg) {
 		formattedMsg := fmt.Sprintf(msg, args...)
@@ -430,7 +430,7 @@ func (l *Logger) Warn(msg string, args ...interface{}) {
 	}
 }
 
-// Error 记录错误级别日志
+// Error logs at the error level
 func (l *Logger) Error(msg string, args ...interface{}) {
 	if len(args) > 0 && containsFormatPlaceholders(msg) {
 		formattedMsg := fmt.Sprintf(msg, args...)
@@ -440,25 +440,25 @@ func (l *Logger) Error(msg string, args ...interface{}) {
 	}
 }
 
-// InfoASR 记录ASR阶段信息日志
+// InfoASR logs info-level messages for the ASR stage
 func (l *Logger) InfoASR(msg string, args ...interface{}) {
 	prefixedMsg := "[ASR] " + msg
 	l.Info(prefixedMsg, args...)
 }
 
-// InfoLLM 记录LLM阶段信息日志
+// InfoLLM logs info-level messages for the LLM stage
 func (l *Logger) InfoLLM(msg string, args ...interface{}) {
 	prefixedMsg := "[LLM] " + msg
 	l.Info(prefixedMsg, args...)
 }
 
-// InfoTTS 记录TTS阶段信息日志
+// InfoTTS logs info-level messages for the TTS stage
 func (l *Logger) InfoTTS(msg string, args ...interface{}) {
 	prefixedMsg := "[TTS] " + msg
 	l.Info(prefixedMsg, args...)
 }
 
-// InfoTiming 记录计时信息日志
+// InfoTiming logs timing-info messages
 func (l *Logger) InfoTiming(msg string, args ...interface{}) {
 	prefixedMsg := "[TIMING] " + msg
 	l.Info(prefixedMsg, args...)

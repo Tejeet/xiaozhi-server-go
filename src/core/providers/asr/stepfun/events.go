@@ -1,12 +1,12 @@
 package stepfun
 
-// BaseEvent 公共事件字段
+// BaseEvent holds common event fields
 type BaseEvent struct {
 	EventID string `json:"event_id,omitempty"`
 	Type    string `json:"type"`
 }
 
-// Error 事件
+// Error event
 type ErrorDetail struct {
 	Type    string `json:"type"`
 	Code    string `json:"code,omitempty"`
@@ -19,7 +19,7 @@ type ErrorEvent struct {
 	Error ErrorDetail `json:"error"`
 }
 
-// Session 会话对象
+// Session is the session object
 type Session struct {
 	ID                      string   `json:"id,omitempty"`
 	Object                  string   `json:"object,omitempty"`
@@ -32,7 +32,7 @@ type Session struct {
 	MaxResponseOutputTokens string   `json:"max_response_output_tokens,omitempty"`
 }
 
-// Session 相关事件
+// Session-related events
 type SessionCreatedEvent struct {
 	BaseEvent
 	Session Session `json:"session"`
@@ -43,7 +43,7 @@ type SessionUpdatedEvent struct {
 	Session Session `json:"session"`
 }
 
-// VAD 事件
+// VAD events
 type SpeechStartedEvent struct {
 	BaseEvent
 	AudioStartMS int64  `json:"audio_start_ms,omitempty"`
@@ -57,7 +57,7 @@ type SpeechStoppedEvent struct {
 	ResponseID string `json:"response_id,omitempty"`
 }
 
-// 音频内容流式事件
+// Streaming audio content events
 type ResponseAudioDeltaEvent struct {
 	BaseEvent
 	ResponseID  string `json:"response_id,omitempty"`
@@ -72,7 +72,7 @@ type ResponseAudioDoneEvent struct {
 	ItemID     string `json:"item_id,omitempty"`
 }
 
-// 音频转录流式事件
+// Streaming audio transcription events
 type ResponseAudioTranscriptDeltaEvent struct {
 	BaseEvent
 	ResponseID  string `json:"response_id,omitempty"`
@@ -90,7 +90,7 @@ type ResponseAudioTranscriptDoneEvent struct {
 	Transcript   string `json:"transcript"`
 }
 
-// 会话消息结构
+// Conversation message structures
 type MessageContentPart struct {
 	Type       string `json:"type"`
 	Text       string `json:"text,omitempty"`
@@ -107,7 +107,7 @@ type MessageItem struct {
 	Content []MessageContentPart `json:"content,omitempty"`
 }
 
-// 会话消息事件
+// Conversation message events
 type ConversationItemCreatedEvent struct {
 	BaseEvent
 	PreviousItemID string      `json:"previous_item_id,omitempty"`
@@ -126,7 +126,7 @@ type ConversationItemInputAudioTranscriptionCompletedEvent struct {
 	Transcript   string `json:"transcript"`
 }
 
-// 输入音频缓冲区事件
+// Input audio buffer events
 type InputAudioBufferCommittedEvent struct {
 	BaseEvent
 	PreviousItemID string `json:"previous_item_id,omitempty"`
@@ -137,7 +137,7 @@ type InputAudioBufferClearedEvent struct {
 	BaseEvent
 }
 
-// 推理输出项目事件
+// Inference output item events
 type ResponseOutputItemAddedEvent struct {
 	BaseEvent
 	ResponseID  string      `json:"response_id,omitempty"`
@@ -170,7 +170,7 @@ type ResponseContentPartDoneEvent struct {
 	Part         MessageContentPart `json:"part"`
 }
 
-// Response 对象及事件
+// Response object and events
 type Response struct {
 	ID            string        `json:"id"`
 	Object        string        `json:"object"`

@@ -3,7 +3,16 @@
     "allow": [
       "Bash(chmod +x linux-amd64-server-upx)",
       "Bash(git update-index *)",
-      "Bash(docker version *)"
+      "Bash(docker version *)",
+      "Bash(awk -F: '{s+=$2} END{print s}')",
+      "Bash(awk -F: '$2>0{print $2\"\\\\t\"$1}')",
+      "Bash(grep -rnP '`json:\"[^\"]*[\\\\x{4e00}-\\\\x{9fff}]|yaml:\"[^\"]*[\\\\x{4e00}-\\\\x{9fff}]' --include=\"*.go\" src)",
+      "Bash(go version *)",
+      "Bash(gofmt -e -l src/core/connection.go src/core/connection_handlemsg.go src/core/connection_sendmsg.go src/core/connection_handlemcp.go src/core/types/audio.go src/core/types/llm.go src/core/chat/dialogue_manager.go src/core/chat/memory.go src/core/function/registry.go src/core/interfaces/connection.go)",
+      "Bash(echo \"--- gofmt exit: $? ---\")",
+      "Bash(go build *)",
+      "Bash(brew install *)",
+      "Bash(echo \"brew opus install done: exit $?\")"
     ]
   }
 }

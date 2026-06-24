@@ -7,26 +7,26 @@ import (
 	"xiaozhi-server-go/src/core/utils"
 )
 
-// Factory VLLLM工厂函数类型
+// Factory is the VLLLM factory function type
 type Factory func(config *Config, logger *utils.Logger) (*Provider, error)
 
 var (
 	factories = make(map[string]Factory)
 )
 
-// Register 注册VLLLM提供者工厂
+// Register registers a VLLLM provider factory
 func Register(name string, factory Factory) {
 	factories[name] = factory
 }
 
-// Create 创建VLLLM提供者实例
+// Create creates a VLLLM provider instance
 func Create(name string, vlllmConfig *configs.VLLMConfig, logger *utils.Logger) (*Provider, error) {
 	factory, ok := factories[name]
 	if !ok {
-		return nil, fmt.Errorf("未知的VLLLM提供者: %s", name)
+		return nil, fmt.Errorf("unknown VLLLM provider: %s", name)
 	}
 
-	// 转换配置格式
+	// Convert the config format
 	config := &Config{
 		Type:        vlllmConfig.Type,
 		ModelName:   vlllmConfig.ModelName,
@@ -39,18 +39,18 @@ func Create(name string, vlllmConfig *configs.VLLMConfig, logger *utils.Logger) 
 		Data:        vlllmConfig.Extra,
 	}
 
-	// 创建提供者实例
+	// Create the provider instance
 	provider, err := factory(config, logger)
 	if err != nil {
-		return nil, fmt.Errorf("创建VLLLM提供者失败: %v", err)
+		return nil, fmt.Errorf("failed to create VLLLM provider: %v", err)
 	}
 
-	// 初始化提供者
+	// Initialize the provider
 	if err := provider.Initialize(); err != nil {
-		return nil, fmt.Errorf("初始化VLLLM提供者失败: %v", err)
+		return nil, fmt.Errorf("failed to initialize VLLLM provider: %v", err)
 	}
 
-	logger.Debug("VLLLM提供者创建成功 %v", map[string]interface{}{
+	logger.Debug("VLLLM provider created successfully %v", map[string]interface{}{
 		"name":       name,
 		"type":       config.Type,
 		"model_name": config.ModelName,
@@ -59,7 +59,7 @@ func Create(name string, vlllmConfig *configs.VLLMConfig, logger *utils.Logger) 
 	return provider, nil
 }
 
-// GetRegisteredProviders 获取已注册的提供者列表
+// GetRegisteredProviders gets the list of registered providers
 func GetRegisteredProviders() []string {
 	var providers []string
 	for name := range factories {

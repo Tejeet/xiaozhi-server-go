@@ -13,17 +13,17 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// Provider Deepgram TTS 提供者
+// Provider is the Deepgram TTS provider
 type Provider struct {
 	*tts.BaseProvider
 	baseURL string
 }
 
-// NewProvider 创建Deepgram TTS提供者
+// NewProvider creates a Deepgram TTS provider
 func NewProvider(config *tts.Config, deleteFile bool) (*Provider, error) {
 	base := tts.NewBaseProvider(config, deleteFile)
 
-	// 构造带参数的URL
+	// Build the URL with parameters
 	// u := fmt.Sprintf("%v?model=%s&encoding=%s&sample_rate=%d",
 	u := fmt.Sprintf("%v?model=%s", config.Cluster, config.Voice)
 	return &Provider{
@@ -32,65 +32,65 @@ func NewProvider(config *tts.Config, deleteFile bool) (*Provider, error) {
 	}, nil
 }
 
-// ToTTS 实现文本到语音的转换
+// ToTTS implements text-to-speech conversion
 func (p *Provider) ToTTS(text string) (string, error) {
-	// 创建WebSocket连接
+	// Create the WebSocket connection
 	header := http.Header{"Authorization": []string{fmt.Sprintf("token %s", p.Config().Token)}}
 	conn, _, err := websocket.DefaultDialer.Dial(p.baseURL, header)
 	if err != nil {
-		return "", fmt.Errorf("连接Deepgram TTS服务器失败: %v", err)
+		return "", fmt.Errorf("failed to connect to the Deepgram TTS server: %v", err)
 	}
 	defer conn.Close()
 
-	// 发送文本消息
+	// Send the text message
 	speakRequest := map[string]string{
 		"type": "Speak",
 		"text": text,
 	}
 	requestBytes, err := json.Marshal(speakRequest)
 	if err != nil {
-		return "", fmt.Errorf("序列化请求失败: %v", err)
+		return "", fmt.Errorf("failed to serialize the request: %v", err)
 	}
 
 	if err := conn.WriteMessage(websocket.TextMessage, requestBytes); err != nil {
-		return "", fmt.Errorf("发送speak请求失败: %v", err)
+		return "", fmt.Errorf("failed to send the speak request: %v", err)
 	}
 
-	// 发送Flush控制消息确保所有音频数据返回
+	// Send a Flush control message to ensure all audio data is returned
 	flushRequest := map[string]string{"type": "Flush"}
 	if err := conn.WriteJSON(flushRequest); err != nil {
-		return "", fmt.Errorf("发送Flush请求失败: %v", err)
+		return "", fmt.Errorf("failed to send the Flush request: %v", err)
 	}
 
-	// 创建临时文件
+	// Create the temp file
 	outputDir := p.Config().OutputDir
 	if outputDir == "" {
 		outputDir = "tmp"
 	}
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
-		return "", fmt.Errorf("创建输出目录失败: %v", err)
+		return "", fmt.Errorf("failed to create output directory: %v", err)
 	}
 
 	// ext := getFileExtension(p.Config().Encoding)
 	ext := "mp3"
 	tempFile := filepath.Join(outputDir, fmt.Sprintf("deepgram_tts_%d.%s", time.Now().UnixNano(), ext))
-	// 接收音频数据
+	// Receive the audio data
 	var lastSeqID int
-	// 接收音频数据
+	// Receive the audio data
 	var audioBuffer bytes.Buffer
 loop:
 	for {
 		messageType, message, err := conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseNormalClosure) {
-				return "", fmt.Errorf("接收响应异常: %v", err)
+				return "", fmt.Errorf("error receiving response: %v", err)
 			}
-			break // 正常关闭
+			break // Normal close
 		}
 
 		switch messageType {
 		case websocket.TextMessage:
-			// 处理控制消息响应
+			// Handle control message responses
 			var response struct {
 				Type       string `json:"type"`
 				SequenceID int    `json:"sequence_id,omitempty"`
@@ -98,45 +98,45 @@ loop:
 			}
 
 			if err := json.Unmarshal(message, &response); err != nil {
-				return "", fmt.Errorf("解析控制消息失败: %v", err)
+				return "", fmt.Errorf("failed to parse the control message: %v", err)
 			}
 
 			switch response.Type {
 			case "Flushed":
-				// 记录最后序列ID
+				// Record the last sequence ID
 				lastSeqID = response.SequenceID
 				break loop
 			case "close":
-				// 服务器确认关闭
+				// Server confirmed close
 				break loop
 			case "error":
-				return "", fmt.Errorf("Deepgram TTS错误: %s", response.Error)
+				return "", fmt.Errorf("Deepgram TTS error: %s", response.Error)
 			}
 		case websocket.BinaryMessage:
-			// 二进制音频数据
-			// 直接写入二进制音频数据到文件
-			// 同时缓冲到内存以备完整性检查
+			// Binary audio data
+			// Write the binary audio data directly to the file
+			// while also buffering it in memory for an integrity check
 			audioBuffer.Write(message)
 		case websocket.CloseMessage:
 			break loop
 		}
 	}
 
-	// 验证音频完整性（可选）
-	// 检查是否接收到音频数据
+	// Verify audio integrity (optional)
+	// Check whether audio data was received
 	if lastSeqID > 0 && audioBuffer.Len() == 0 {
-		return "", fmt.Errorf("音频数据不完整，最后接收序列号: %d", lastSeqID)
+		return "", fmt.Errorf("audio data is incomplete, last received sequence number: %d", lastSeqID)
 	}
 
-	// 写入音频文件
+	// Write the audio file
 	if err := os.WriteFile(tempFile, audioBuffer.Bytes(), 0644); err != nil {
-		return "", fmt.Errorf("写入音频文件失败: %v", err)
+		return "", fmt.Errorf("failed to write the audio file: %v", err)
 	}
 
 	return tempFile, nil
 }
 
-// getFileExtension 根据编码获取文件扩展名
+// getFileExtension gets the file extension based on the encoding
 func getFileExtension(encoding string) string {
 	switch encoding {
 	case "linear16":

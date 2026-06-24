@@ -5,7 +5,7 @@ import (
 	"xiaozhi-server-go/src/core/types"
 )
 
-// Provider 所有提供者的基础接口
+// Provider is the base interface for all providers
 type Provider interface {
 	Initialize() error
 	Cleanup() error
@@ -15,29 +15,29 @@ type AsrEventListener interface {
 	OnAsrResult(result string, isFinalResult bool) bool
 }
 
-// ASRProvider 语音识别提供者接口
+// ASRProvider is the speech-recognition provider interface
 type ASRProvider interface {
 	Provider
-	// 直接识别音频数据
+	// Directly transcribe audio data
 	Transcribe(ctx context.Context, audioData []byte) (string, error)
-	// 添加音频数据到缓冲区
+	// Add audio data to the buffer
 	AddAudio(data []byte) error
 
-	// 发送最后一块音频数据并标记为结束
+	// Send the last audio chunk and mark it as the end
 	SendLastAudio(data []byte) error
 
 	SetListener(listener AsrEventListener)
 
-	// 设置用户偏好，例如语言等
+	// Set user preferences, such as language
 	SetUserPreferences(preferences map[string]interface{}) error
 
-	// 复位ASR状态
+	// Reset the ASR state
 	Reset() error
 
-	// 长连接的asr断开连接
+	// Disconnect the long-lived ASR connection
 	CloseConnection() error
 
-	// 获取当前静音计数
+	// Get the current silence count
 	GetSilenceCount() int
 
 	ResetSilenceCount()
@@ -47,20 +47,20 @@ type ASRProvider interface {
 	EnableSilenceDetection(bEnable bool)
 }
 
-// TTSProvider 语音合成提供者接口
+// TTSProvider is the speech-synthesis provider interface
 type TTSProvider interface {
 	Provider
 
-	// 合成音频并返回文件路径
+	// Synthesize audio and return the file path
 	ToTTS(text string) (string, error)
 
 	SetVoice(voice string) (error, string)
 }
 
-// LLMProvider 大语言模型提供者接口
+// LLMProvider is the large-language-model provider interface
 type LLMProvider interface {
 	types.LLMProvider
 }
 
-// Message 对话消息
+// Message is a conversation message
 type Message = types.Message

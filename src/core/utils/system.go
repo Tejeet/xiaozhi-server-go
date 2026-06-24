@@ -5,7 +5,7 @@ import (
 	"github.com/shirou/gopsutil/v3/mem"
 )
 
-// GetSystemMemoryUsage 获取当前系统内存使用百分比（跨平台）
+// GetSystemMemoryUsage gets the current system memory usage percentage (cross-platform)
 func GetSystemMemoryUsage() (float64, error) {
 	vmStat, err := mem.VirtualMemory()
 	if err != nil {
@@ -14,7 +14,7 @@ func GetSystemMemoryUsage() (float64, error) {
 	return vmStat.UsedPercent, nil
 }
 
-// GetSystemCPUUsage 获取当前CPU使用百分比（跨平台，取所有核心的平均值）
+// GetSystemCPUUsage gets the current CPU usage percentage (cross-platform, averaged over all cores)
 func GetSystemCPUUsage() (float64, error) {
 	percentages, err := cpu.Percent(0, false)
 	if err != nil {

@@ -225,7 +225,7 @@ func (p *Provider) SendLastAudio(data []byte) error {
 }
 
 func (p *Provider) StartStreaming(ctx context.Context) error {
-	p.logger.Info("[ASR] [iflytek] [流式识别] 开始")
+	p.logger.Info("[ASR] [iflytek] [streaming recognition] start")
 	p.ResetStartListenTime()
 
 	p.connMutex.Lock()
@@ -243,7 +243,7 @@ func (p *Provider) StartStreaming(ctx context.Context) error {
 		return err
 	}
 
-	p.logger.Debug("[ASR] [iflytek] 开始连接讯飞 ASR WebSocket: endpoint=%s appid=%s api_key=%s language=%s domain=%s accent=%s format=%s encoding=%s vad_eos=%d",
+	p.logger.Debug("[ASR] [iflytek] connecting to iFlytek ASR WebSocket: endpoint=%s appid=%s api_key=%s language=%s domain=%s accent=%s format=%s encoding=%s vad_eos=%d",
 		sanitizeIFlytekAuthURL(authURL),
 		maskSecret(p.appID),
 		maskSecret(p.apiKey),
@@ -258,10 +258,10 @@ func (p *Provider) StartStreaming(ctx context.Context) error {
 	conn, resp, err := websocket.DefaultDialer.DialContext(ctx, authURL, nil)
 	if err != nil {
 		diagnostics := describeIFlytekHandshakeFailure(resp, authURL)
-		p.logError("[ASR] [iflytek] 连接讯飞 ASR WebSocket 失败: err=%v %s", err, diagnostics)
+		p.logError("[ASR] [iflytek] failed to connect to iFlytek ASR WebSocket: err=%v %s", err, diagnostics)
 		return fmt.Errorf("connect iFlytek ASR websocket failed: %w (%s)", err, diagnostics)
 	}
-	p.logger.Debug("[ASR] [iflytek] 讯飞 ASR WebSocket 连接成功: endpoint=%s status=%s", sanitizeIFlytekAuthURL(authURL), responseStatus(resp))
+	p.logger.Debug("[ASR] [iflytek] iFlytek ASR WebSocket connected: endpoint=%s status=%s", sanitizeIFlytekAuthURL(authURL), responseStatus(resp))
 
 	p.conn = conn
 	p.isStreaming = true
@@ -552,7 +552,7 @@ func describeIFlytekHandshakeFailure(resp *http.Response, rawURL string) string 
 	}
 
 	if resp == nil {
-		details = append(details, "http_status=<none>", "hint=未收到 HTTP 响应，优先检查网络/DNS/代理")
+		details = append(details, "http_status=<none>", "hint=no HTTP response received; check network/DNS/proxy first")
 		return strings.Join(details, " ")
 	}
 
@@ -567,7 +567,7 @@ func describeIFlytekHandshakeFailure(resp *http.Response, rawURL string) string 
 	}
 
 	if resp.StatusCode == http.StatusUnauthorized {
-		details = append(details, "hint=401 通常表示 api_key/api_secret/appid/asr_url 或服务器时间签名不匹配")
+		details = append(details, "hint=401 usually means api_key/api_secret/appid/asr_url or the server time signature do not match")
 	}
 
 	return strings.Join(details, " ")

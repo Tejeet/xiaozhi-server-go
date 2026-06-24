@@ -5,21 +5,21 @@ import (
 	"xiaozhi-server-go/src/core/utils"
 )
 
-// OllamaVLLMProvider Ollama类型的VLLLM提供者
+// OllamaVLLMProvider is the Ollama-type VLLLM provider
 type OllamaVLLMProvider struct {
 	*vlllm.Provider
 }
 
-// NewProvider 创建Ollama VLLLM提供者实例
+// NewProvider creates an Ollama VLLLM provider instance
 func NewProvider(config *vlllm.Config, logger *utils.Logger) (*vlllm.Provider, error) {
-	// 直接使用基础VLLLM Provider，因为它已经复用了LLM架构
-	// Ollama类型的VLLLM只需要确保使用正确的模型名称（如qwen2-vl:7b）
+	// Use the base VLLLM Provider directly, since it already reuses the LLM architecture.
+	// An Ollama-type VLLLM only needs to make sure the correct model name is used (e.g. qwen2-vl:7b)
 	provider, err := vlllm.NewProvider(config, logger)
 	if err != nil {
 		return nil, err
 	}
 
-	logger.Debug("Ollama VLLLM Provider创建成功 %v", map[string]interface{}{
+	logger.Debug("Ollama VLLLM Provider created successfully %v", map[string]interface{}{
 		"model_name": config.ModelName,
 		"base_url":   config.BaseURL,
 	})
@@ -27,7 +27,7 @@ func NewProvider(config *vlllm.Config, logger *utils.Logger) (*vlllm.Provider, e
 	return provider, nil
 }
 
-// init 注册Ollama VLLLM提供者
+// init registers the Ollama VLLLM provider
 func init() {
 	vlllm.Register("ollama", NewProvider)
 }

@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// GetProjectDir 获取项目根目录
+// GetProjectDir gets the project root directory
 func GetProjectDir() string {
 	dir, err := os.Getwd()
 	if err != nil {
@@ -14,7 +14,7 @@ func GetProjectDir() string {
 	return dir
 }
 
-// 辅助函数：返回两个时间间隔中较小的一个
+// MinDuration is a helper that returns the smaller of two time durations
 func MinDuration(a, b time.Duration) time.Duration {
 	if a < b {
 		return a

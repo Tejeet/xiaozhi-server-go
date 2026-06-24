@@ -5,9 +5,9 @@ import (
 	"xiaozhi-server-go/src/core/types"
 )
 
-// Config LLM配置结构
+// Config is the LLM configuration struct
 type Config struct {
-	Name        string                 `yaml:"name"` // LLM提供者名称
+	Name        string                 `yaml:"name"` // LLM provider name
 	Type        string                 `yaml:"type"`
 	ModelName   string                 `yaml:"model_name"`
 	BaseURL     string                 `yaml:"base_url,omitempty"`
@@ -18,35 +18,35 @@ type Config struct {
 	Extra       map[string]interface{} `yaml:",inline"`
 }
 
-// Provider LLM提供者接口
+// Provider is the LLM provider interface
 type Provider interface {
 	types.LLMProvider
 }
 
-// BaseProvider LLM基础实现
+// BaseProvider is the base LLM implementation
 type BaseProvider struct {
 	config    *Config
-	SessionID string // 当前会话ID
+	SessionID string // Current session ID
 }
 
-// Config 获取配置
+// Config gets the configuration
 func (p *BaseProvider) Config() *Config {
 	return p.config
 }
 
-// NewBaseProvider 创建LLM基础提供者
+// NewBaseProvider creates a base LLM provider
 func NewBaseProvider(config *Config) *BaseProvider {
 	return &BaseProvider{
 		config: config,
 	}
 }
 
-// Initialize 初始化提供者
+// Initialize initializes the provider
 func (p *BaseProvider) Initialize() error {
 	return nil
 }
 
-// Cleanup 清理资源
+// Cleanup cleans up resources
 func (p *BaseProvider) Cleanup() error {
 	return nil
 }
@@ -56,33 +56,33 @@ func (p *BaseProvider) GetSessionID() string {
 }
 
 func (p *BaseProvider) SetIdentityFlag(idType string, flag string) {
-	// 默认实现，子类可以覆盖
+	// Default implementation; subclasses can override
 }
 
-// Factory LLM工厂函数类型
+// Factory is the LLM factory function type
 type Factory func(config *Config) (Provider, error)
 
 var factories = make(map[string]Factory)
 
-// Register 注册LLM提供者工厂
+// Register registers an LLM provider factory
 func Register(name string, factory Factory) {
 	factories[name] = factory
 }
 
-// Create 创建LLM提供者实例
+// Create creates an LLM provider instance
 func Create(name string, config *Config) (Provider, error) {
 	factory, ok := factories[name]
 	if !ok {
-		return nil, fmt.Errorf("未知的LLM提供者: %s", name)
+		return nil, fmt.Errorf("unknown LLM provider: %s", name)
 	}
 
 	provider, err := factory(config)
 	if err != nil {
-		return nil, fmt.Errorf("创建LLM提供者失败: %v", err)
+		return nil, fmt.Errorf("failed to create LLM provider: %v", err)
 	}
 
 	if err := provider.Initialize(); err != nil {
-		return nil, fmt.Errorf("初始化LLM提供者失败: %v", err)
+		return nil, fmt.Errorf("failed to initialize LLM provider: %v", err)
 	}
 
 	return provider, nil

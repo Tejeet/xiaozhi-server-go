@@ -47,7 +47,7 @@ func (fr *FunctionRegistry) GetFunctionByFilter(filter []string) []openai.Tool {
 	}
 	functions := make([]openai.Tool, 0)
 	for name, function := range fr.functions {
-		// 返回self和local开头的函数
+		// Return functions whose names start with "self" or "local"
 		if strings.HasPrefix(name, "self") || strings.HasPrefix(name, "local") {
 			functions = append(functions, function)
 			continue

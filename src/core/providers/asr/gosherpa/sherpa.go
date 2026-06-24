@@ -19,10 +19,10 @@ func NewProvider(config *asr.Config, deleteFile bool, logger *utils.Logger) (*Pr
 	provider := &Provider{
 		BaseProvider: base,
 	}
-	// 初始化音频处理
+	// Initialize audio processing
 	provider.InitAudioProcessing()
 	dialer := websocket.Dialer{
-		HandshakeTimeout: 10 * time.Second, // 设置握手超时
+		HandshakeTimeout: 10 * time.Second, // Set the handshake timeout
 	}
 	conn, _, err := dialer.DialContext(context.Background(), config.Data["addr"].(string), map[string][]string{})
 	if err != nil {
@@ -52,14 +52,14 @@ func (p *Provider) Transcribe(ctx context.Context, audioData []byte) (string, er
 	return "", nil
 }
 
-// 添加音频数据到缓冲区
+// AddAudio adds audio data to the buffer
 func (p *Provider) AddAudio(data []byte) error {
 	p.conn.WriteMessage(websocket.BinaryMessage, data)
 
 	return nil
 }
 
-// 复位ASR状态
+// Reset resets the ASR state
 func (p *Provider) Reset() error {
 	return nil
 }
