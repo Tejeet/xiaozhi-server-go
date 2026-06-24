@@ -1,11 +1,14 @@
 services:
   app:
     build: .
-    container_name: xiaozhi-server
     restart: unless-stopped
-    ports:
-      - "8080:8080"
-      - "8000:8000"
+    # 用 expose（仅容器内端口），不要用 ports 直接绑定宿主机端口。
+    # Coolify 自带反向代理，会按你在面板里配置的域名把流量转发到这些端口。
+    # 直接 `ports: 8000:8000` 会和宿主机上已占用的端口冲突：
+    #   "Bind for 0.0.0.0:8000 failed: port is already allocated"
+    expose:
+      - "8080"  # HTTP / Web 管理界面 —— 在 Coolify 里把域名指向这个端口
+      - "8000"  # 设备 WebSocket
     environment:
       - ENV=production
       - PORT=8080
